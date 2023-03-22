@@ -20,21 +20,22 @@
 
 from flatsurf.geometry.thurston_veech import ThurstonVeech
 
-class PeriodicPoints():
+
+class PeriodicPoints:
     def __init__(self, T):
         # we will need hp, vp, hmult, vmult
         self._surface = T
         pass
 
     def list(self):
-        r'''Return the periodic points'''
+        r"""Return the periodic points"""
 
         G = self._candidate_graph()
         G = self._prune_candidate_graph(G)
         return G.vertices()
 
     def _horizontal_constraint(self, height):
-        r'''Constrain y coordinate of point with rational height lemma
+        r"""Constrain y coordinate of point with rational height lemma
 
         EXAMPLE::
 
@@ -44,14 +45,14 @@ class PeriodicPoints():
             sage: R = X.base_ring()
             sage: P._horizontal_constraint(R(R.gen()))
             ([0 0 1 0], (0))
-        '''
+        """
 
         A = (~height).matrix().submatrix(1)
         A = A.parent().zero().augment(A)
         return A, A.column_space().zero()
 
     def _vertical_constraint(self, width):
-        r'''Constrain x coordinate of point with rational height lemma
+        r"""Constrain x coordinate of point with rational height lemma
 
         EXAMPLE::
 
@@ -62,16 +63,20 @@ class PeriodicPoints():
             sage: P._vertical_constraint(R(R.gen()))
             ([1 0 0 0], (0))
 
-        '''
+        """
         A = (~width).matrix().submatrix(1)
         A = A.augment(A.parent().zero())
         return A, A.column_space().zero()
 
     def _connecting_constraint_horizontal(self, R, distance):
-        return self._connecting_constraint_generic(self._surface.horizontal_twist()[0][1], distance, R.width())
+        return self._connecting_constraint_generic(
+            self._surface.horizontal_twist()[0][1], distance, R.width()
+        )
 
     def _connecting_constraint_vertical(self, R, distance):
-        return self._connecting_constraint_generic(self._surface.vertical_twist()[0][1], distance, R.height())
+        return self._connecting_constraint_generic(
+            self._surface.vertical_twist()[0][1], distance, R.height()
+        )
 
     def _connecting_constraint_generic(self, twist, distance, side_length):
         A_t = twist.matrix()
@@ -88,44 +93,61 @@ class PeriodicPoints():
         assert K.dimension() <= 1
 
         from sage.all import Polyhedron
+
         line = Polyhedron(vertices=[x], lines=K.basis())
         return R.intersection(line)
 
     def _constraint_segments_in_region(self, R):
-        r'''Return segments containing all periodic points in region ``R`` '''
+        r"""Return segments containing all periodic points in region ``R``"""
         segments = []
 
         width, height = R.width(), R.height()
         horizontal_cylinder = R.horizontal_cylinder()
         vertical_cylinder = R.vertcial_cylinder()
 
-        horizontal_constraint =  self._horizontal_constraint(height)
+        horizontal_constraint = self._horizontal_constraint(height)
         vertical_constraint = self._vertical_constraint(width)
 
         from sage.all import QQ
+
         if (horizontal_cylinder.circumference() / width) not in QQ:
-            for R1, wrap in horizontal_cylinder.regions(start=R, multiplicity=horizontal_cylinder.multiplicity()):
+            for R1, wrap in horizontal_cylinder.regions(
+                start=R, multiplicity=horizontal_cylinder.multiplicity()
+            ):
                 connecting_constraint = self._connecting_constraint(R1, wrap)
-                constraints = [horizontal_constraint, vertical_constraint, connecting_constraint]
+                constraints = [
+                    horizontal_constraint,
+                    vertical_constraint,
+                    connecting_constraint,
+                ]
                 segments.append(self._solve_constraints_in_region(R, constraints))
 
         else:
             assert (vertical_cylinder.circumference() / height) not in QQ
-            for R1 in vertical_cylinder.regions(start=R, multiplicity=vertical_cylinder.multiplicity()):
+            for R1 in vertical_cylinder.regions(
+                start=R, multiplicity=vertical_cylinder.multiplicity()
+            ):
                 connecting_constraint = self._connecting_equation(R, R1)
-                segments.append(self._solve_constraints(horizontal_constraint, vertical_constraint, connecting_constraint))
+                segments.append(
+                    self._solve_constraints(
+                        horizontal_constraint,
+                        vertical_constraint,
+                        connecting_constraint,
+                    )
+                )
 
         return [s for s in segments if not s.is_empty()]
 
-
     def _constraint_segments(self):
-        r'''Return set of segments containing all periodic points'''
-        return {l
-                for R in self._surface.regions()
-                for l in self._constraint_segments_in_region(R)}
+        r"""Return set of segments containing all periodic points"""
+        return {
+            l
+            for R in self._surface.regions()
+            for l in self._constraint_segments_in_region(R)
+        }
 
     def _candidate_points(self):
-        r'''Return a (potentially large) set of candidate periodic points'''
+        r"""Return a (potentially large) set of candidate periodic points"""
 
         candidate_points = set()
         S = self._constraint_segments()
@@ -143,11 +165,11 @@ class PeriodicPoints():
         return candidate_points
 
     def _candidate_graph(self):
-        r'''Return graph with:
+        r"""Return graph with:
         vertices being either a set S of potential periodic points or ``None``, and
         p <--> q iff there is a generator of the Veech Group sending p to q,
         where p <--> ``None`` when a generator g sends p outside of S
-        '''
+        """
         S = self._candidate_points()
         S.add(None)
 
@@ -164,8 +186,7 @@ class PeriodicPoints():
         return G
 
     def _prune_candidate_graph(self, G):
-        r'''Given candidate graph, return the subgraph of periodic points'''
+        r"""Given candidate graph, return the subgraph of periodic points"""
 
         # remove the connected component of ``None``
         raise NotImplementedError
-
