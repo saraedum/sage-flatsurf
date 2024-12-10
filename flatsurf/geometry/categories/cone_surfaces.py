@@ -305,6 +305,107 @@ class ConeSurfaces(SurfaceCategory):
                         ConeSurfaces.ParentMethods._is_cone_surface(self, limit=limit)
                     )
 
+            class ElementMethods:
+                r"""
+                Provides methods available to all points on oriented cone surfaces.
+
+                If you want to add functionality for such points you most
+                likely want to put it here.
+                """
+                def shortest_path(self, other):
+                    r"""
+                    Return a shortest path from this point to ``other``.
+
+                    The length of the path is measured by the Euclidean length
+                    of the segments that make up the path.
+
+                    ALGORITHM:
+
+                    To our knowledge there is no documented good algorithm to
+                    compute the shortest path in such a setting, see the
+                    discussion in
+                    https://github.com/flatsurf/sage-flatsurf/issues/293.
+
+                    We may assume that both end points are vertices. Then a
+                    shortest path is a sequence of saddle connections.
+
+                    The idea is now that if we know the shortest saddle
+                    connection between any two vertices, then we can run a
+                    shortest path algorithm on the graph formed by these saddle
+                    connections.
+
+                    So, it is enough to enumerate all saddle connections by
+                    length until we either found a saddle connection between
+                    all pairs of vertices, or we conclude that any saddle
+                    connections we are missing cannot be on the shortest path.
+
+                    Therefore, we iteratively compute a distance matrix that
+                    encodes the shortest path between all pairs of vertices. We
+                    start by putting in finite values provided by the saddle
+                    connections coming from the edges of the polygons and run
+                    the Floyd Warshall algorithm to make all entries finite
+                    (for each connected component.)
+
+                    Essentially, we now run a saddle connection search starting
+                    from each vertex looking for saddle connections up to the
+                    maximum entry in its row of the matrix. Whenever we find a
+                    saddle connection, we update the matrix and run a partial
+                    Floyd Warshall to propagate (essentially, the algorithm you
+                    would run when adding an edge to a graph.)
+
+                    There seems to be no obvious way to make a statement about
+                    the complexity of this algorithm. The Floyd Warshall part
+                    does not seem to be the limiting factor in realistic
+                    examples and things seem to depend a lot on the saddle
+                    connection search complexity which hinges on the geometry
+                    of the surface.
+
+                    EXAMPLES:
+
+                    A trivial shortest path::
+
+                        sage: from flatsurf import translation_surfaces
+                        sage: S = translation_surfaces.square_torus()
+                        sage: p = S(0, 0)
+                        sage: p.shortest_path(p)
+                        Path([])
+
+                    A shortest path that stays within the polygon (but is not
+                    unique)::
+
+                        sage: p.shortest_path(S(0, (1/2, 1/2)))
+
+                    A shortest path to a vertex of the starting polygon that
+                    crosses over another polygon::
+
+                        sage: from flatsurf import Polygon, MutableOrientedSimilaritySurface
+
+                        sage: P = Polygon(vertices=[(0, 0), (1, 0), (1, 5), (0, 5)])
+
+                        sage: S = MutableOrientedSimilaritySurface(QQ)
+                        sage: S.add_polygon(P)
+                        0
+                        sage: S.add_polygon(P)
+                        1
+                        sage: S.add_polygon(P)
+                        2
+                        sage: S.glue((0, 1), (1, 3))
+                        sage: S.glue((1, 1), (2, 3))
+                        sage: S.glue((0, 0), (2, 2))
+
+                        sage: p = S(0, (1/2, 4))
+                        sage: q = S(0, 0)
+
+                        sage: p.shortest_path(q)
+
+                    A shortest path between two inner points that goes through a vertex::
+
+                        sage: q = S(0, (1/2, 1))
+                        sage: p.shortest_path(q)
+
+                    """
+                    raise NotImplementedError
+
             class WithoutBoundary(SurfaceCategoryWithAxiom):
                 r"""
                 The category of oriented cone surfaces without boundary.
