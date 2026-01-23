@@ -9,12 +9,10 @@ GL(2,R)-orbit closure of translation surfaces
 
 """
 
-# TODO: Verify that all methods here return SageMath objects
-
 # ****************************************************************************
 #  This file is part of sage-flatsurf.
 #
-#        Copyright (C) 2019-2025 Julian Rüth
+#        Copyright (C) 2019-2026 Julian Rüth
 #                      2020      Vincent Delecroix
 #
 #  sage-flatsurf is free software: you can redistribute it and/or modify
@@ -118,13 +116,14 @@ class GL2ROrbitClosure:
             raise TypeError("surface must be a translation surface")
 
         from flatsurf.geometry.categories import TranslationSurfaces
-        if surface not in TranslationSurfaces():
+        if surface not in TranslationSurfaces():  # pyright: ignore[reportCallIssue]
             raise NotImplementedError(
                 "cannot compute orbit closure of a non-translation surface"
                 )
 
         self._surface = surface
 
+        # TODO: Drop all this and use homology machinery instead.
         # We construct a spanning set of edges, that is a subset of the edges
         # of the flat triangulation that form a basis of H_1(S, Sigma; Z).
         t, m = self._spanning_tree()
@@ -155,6 +154,7 @@ class GL2ROrbitClosure:
 
         self._tangent_space = LazyTangentSpace(surface, self.d)
 
+        # TODO: Is this just a cohomology element essentially?
         self.update_tangent_space_from_vector(self.H.transpose()[0])
         self.update_tangent_space_from_vector(self.H.transpose()[1])
 
@@ -177,6 +177,7 @@ class GL2ROrbitClosure:
             FlatTriangulationCombinatorial(...) with vectors ...
 
         """
+        # TODO: Do we really need this once homology handles a lot more?
         return self._surface.pyflatsurf().codomain().flat_triangulation()
 
     @cached_method
@@ -199,6 +200,7 @@ class GL2ROrbitClosure:
             Conversion from Vector space of dimension 2 over Number Field in c with defining polynomial x^10 - 11*x^8 + 44*x^6 - 77*x^4 + 55*x^2 - 11 with c = 1.979642883761866? to flatsurf::Vector<eantic::renf_elem_class>
 
         """
+        # TODO: Do we really need this once homology handles a lot more?
         return self._surface.pyflatsurf().codomain().vector_space_conversion()
 
     @property
@@ -224,11 +226,12 @@ class GL2ROrbitClosure:
             Flatsurf Vectors over Real Embedded Number Field in c with defining polynomial x^10 - 11*x^8 + 44*x^6 - 77*x^4 + 55*x^2 - 11 with c = 1.979642883761866?
 
         """
+        # TODO: Do we really need this once homology handles a lot more?
         import warnings
         warnings.warn("V2 has been deprecated as a property for GL2ROrbitClosure and will be removed in a future version of sage-flatsurf; use surface.pyflatsurf()._pyflatsurf_conversion.vector_space_conversion()._vectors() instead if you really need that parent")
 
         import pyflatsurf.vector
-        return pyflatsurf.vector.Vectors(self._surface.base_ring())
+        return pyflatsurf.vector.Vectors(self._surface.base_ring())  # pyright: ignore[reportCallIssue]
 
     def dimension(self):
         r"""
@@ -422,6 +425,7 @@ class GL2ROrbitClosure:
             ....:     assert holonomy == O._vector_space_conversion().section(vector)
 
         """
+        # TODO: Implement in homology instead, i.e., as a method on a homology class.
         return self.V(v) * self.H
 
     def holonomy_dual(self, v):
@@ -440,12 +444,36 @@ class GL2ROrbitClosure:
         A two-dimensional vector over the base ring of the translation surface.
 
         """
+        # TODO: Implement in homology instead, i.e., as a method on a homology class.
+        # TODO: Should we implement the Poincaré dual also so this holonomy circ Poincaré (holonomy is probably a reasonable name?)
         return self.V(v) * self.Hdual
 
     def tangent_space_basis(self):
+        # TODO: This should return a cohomology class instead.
+        r"""
+        Return a basis of the tangent space constructed so far.
+
+        The basis elements are expressed in period coordinates, one entry for
+        each element of the relative cohomology basis.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: from flatsurf import GL2ROrbitClosure # optional: pyflatsurf
+            sage: x = polygen(QQ)
+            sage: K.<a> = NumberField(x^3 - 2, embedding=AA(2)**(1/3))
+            sage: S = translation_surfaces.mcmullen_L(1,1,1,a)
+            sage: O = GL2ROrbitClosure(S) # optional: pyflatsurf
+            sage: O.tangent_space_basis()
+            [(1, 0, a, -a), (1, -1, 1, 0)]
+
+        # TODO: Once this uses the homology machinery, add the corresponding cohomology classes.
+
+        """
         return self._tangent_space.basis()
 
     def lift(self, v):
+        # TODO: This should return a 1-cochain instead so it's just a lift of a cohomology class. And thus should live on cohomology classes.
         r"""
         Given a vector in the "spanning set basis" return a vector on the full basis of
         edges.
@@ -534,6 +562,8 @@ class GL2ROrbitClosure:
         return A.solve_right(u)
 
     def absolute_homology(self):
+        # TODO: Implement in homology, i.e., provide the mapping from relative to absolute homology.
+        # TODO: Note that this is not used anywhere.
         vert_index = {v: i for i, v in enumerate(self._flat_triangulation().vertices())}
         m = len(vert_index)
         if m == 1:
@@ -562,6 +592,9 @@ class GL2ROrbitClosure:
 
     def absolute_dimension(self):
         r"""
+        Return the absolute dimension of the tangent space, i.e., the dimension
+        of the image of the tangent space in absolute cohomology.
+
         EXAMPLES::
 
             sage: from flatsurf import polygons, similarity_surfaces
@@ -594,6 +627,7 @@ class GL2ROrbitClosure:
         ).rank()
 
     def _spanning_tree(self, root=None):
+        # TODO: This should probably be an implementation detail of (co)homology computations.
         r"""
         Return a pair ``(tree, proj)`` where
 
@@ -700,6 +734,7 @@ class GL2ROrbitClosure:
 
         It can be used to compute holonomies. (we can be off by a - sign)
         """
+        # TODO: the generic intersection machinery in homology should be good enough.
         d = len(spanning_set)
         h = spanning_set[0].positive()
         all_edges = {e.positive() for e in spanning_set}
@@ -785,6 +820,7 @@ class GL2ROrbitClosure:
             ....:             for b in O.boundaries():
             ....:                 assert (O.proj * b).is_zero()
         """
+        # TODO: Is this really needed for anything? Feels like this has nothing to do with orbit closure really. Maybe just deprecate and keep it around for the time being.
         n = self._flat_triangulation().size()
         V = FreeModule(ZZ, n)
         B = []
@@ -834,9 +870,19 @@ class GL2ROrbitClosure:
 
     def is_teichmueller_curve(self, bound, limit=-1):
         r"""
-        Return ``False`` when the program can find a direction which is either completely
-        periodic with incomensurable moduli or a direction with at least one cylinder
-        and at least one minimal component.
+        Search for a direction which is either
+        * completely periodic with incomensurable moduli or
+        * with at least one cylinder and at least one minimal component.
+
+        Return ``False`` if such a direction is found and ``Unknown`` otherwise.
+
+        INPUT:
+
+        - ``bound`` -- consider directions coming from saddle connections up to this length
+        - ``limit`` -- the number of Zorich induction steps to perform to
+          determine whether a flow component might be a cylinder; if -1, the
+          default, then induction steps are performed until the component is
+          determined to be a cylinder or minimal.
 
         EXAMPLES::
 
@@ -917,6 +963,8 @@ class GL2ROrbitClosure:
             (0, 0, 1, 0)
 
         """
+        # TODO: Change the returned value to be an actual relative homology class.
+        # TODO: Do we really need the weird input from kontsevich_zorich_cocycle?
         if (
             component.cylinder() != True
         ):  # we are comparing to a boost tribool so this cannot be replaced by "is not True"  # noqa
@@ -950,6 +998,8 @@ class GL2ROrbitClosure:
 
         From A. Wright Cylinder Deformation Theorem.
         """
+        # TODO: Return relative cohomology classes.
+        # TODO: Add example.
 
         module_fractions = self.cylinder_modules(decomposition)
         circumferences = self.cylinder_circumferences(decomposition)
@@ -977,6 +1027,7 @@ class GL2ROrbitClosure:
           boundary of ``decomposition`` and the corresponding values are the indices
           of the components of ``decomposition``
         """
+        # TODO: This should probably go away.
         components = list(decomposition.components())
 
         n = len(sc_index)
@@ -1076,6 +1127,7 @@ class GL2ROrbitClosure:
             [-1  1]
 
         """
+        # TODO: This is just another base of relative homology. Maybe we could model this on that level somehow and get rid of this method essentially, i.e., create relative homology from a decomposition.
         sc_pos = (
             []
         )  # list of positive boundary saddle connections (store only one orientation for each)
@@ -1115,6 +1167,8 @@ class GL2ROrbitClosure:
         return A, sc_index, proj
 
     def cylinder_circumferences(self, decomposition):
+        # TODO: Return relative homology classes.
+        # TODO: This is just a base change applied to the relative homology induced by decomposition. Maybe we could model it there trivially.
         kz = self.flow_decomposition_kontsevich_zorich_cocycle(decomposition)
 
         vcyls = []
@@ -1135,6 +1189,14 @@ class GL2ROrbitClosure:
         return vcyls
 
     def cylinder_module(self, cylinder):
+        r"""
+        Return the modulus of ``cylinder``, i.e., its width and height.
+
+        EXAMPLES::
+
+            # TODO: Add example.
+
+        """
         section  = self._vector_space_conversion().ring_conversion().section
         width = section(cylinder.width())
         height = section(cylinder.vertical().project(cylinder.circumferenceHolonomy()))
@@ -1142,6 +1204,14 @@ class GL2ROrbitClosure:
         return width, height
 
     def cylinder_modules(self, decomposition):
+        r"""
+        Return the moduli of the cylinders in ``decomposition``, i.e., their widths and heights.
+
+        EXAMPLES::
+
+            # TODO: Add example.
+
+        """
         modules = []
 
         for component in decomposition.components():
@@ -1203,6 +1273,7 @@ class GL2ROrbitClosure:
             (5, 3, 3): 4
             (5, 4, 4): 7
             (5, 5, 3): 4
+
         """
         circumferences = self.cylinder_circumferences(decomposition)
         modules = self.cylinder_modules(decomposition)
@@ -1210,6 +1281,16 @@ class GL2ROrbitClosure:
         self._tangent_space.update_from_flow_decomposition(circumferences, modules)
 
     def update_tangent_space_from_vector(self, v):
+        r"""
+        Enlarge the currently determined tangent space with ``v`` which is a
+        direction in the tangent space encoded as a relative cohomology class.
+
+        EXAMPLES::
+
+            TODO
+
+        """
+        # TODO: v should probably be required to be a relative cohomology class
         self._tangent_space.update_from_vector(v)
 
     def __eq__(self, other):
@@ -1229,7 +1310,7 @@ class GL2ROrbitClosure:
             True
 
         """
-        return self._surface == other._surface
+        return type(self) == type(other) and self._surface == other._surface
 
     def __ne__(self, other):
         r"""
@@ -1292,6 +1373,15 @@ class GL2ROrbitClosure:
 
 
 class LazyTangentSpace:
+    r"""
+    Helper for :class:`GL2ROrbitClosure` that keeps track of the tangent space
+    computed thus far.
+
+    EXAMPLES::
+
+        # TODO
+
+    """
     def __init__(self, surface, ambient_dimension):
         self._surface_base_ring = surface.base_ring()
         self._ambient_dimension = ambient_dimension
@@ -1299,10 +1389,11 @@ class LazyTangentSpace:
         self._pending_for_dimension = []
         self._pending_for_basis = []
 
-        # The tangent space we have constructed so far.
+        # The tangent space we have constructed so far as relative cohomology classes.
         # Can only be safely accessed after a call to _require_basis.
         # Note that we don't use Sage vector spaces because they are usually
         # way too slow (in particular we avoid calling .echelonize())
+        # TODO: Actually use relative cohomology classes.
         self._basis = []
 
         # The tangent space vectors reduced modulo a prime ideal _p of the
@@ -1316,6 +1407,7 @@ class LazyTangentSpace:
 
     @cached_method
     def base_ring(self):
+        # TODO: Examples and docstring.
         # TODO: This doesn't really have anything to do with "vectors". We
         # should reimplement this in sage-flatsurf and drop the implementation
         # in pyflatsurf.
@@ -1323,6 +1415,16 @@ class LazyTangentSpace:
         return Vectors(self._surface_base_ring)._algebraic_ring()
 
     def _create_primes(self):
+        r"""
+        Returns an infinite sequence of big prime ideals of the
+        :meth:`base_ring` to speed up operations by computing the basis of the
+        tangent space modulo these primes.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         from sage.all import next_prime
 
         p = 2**60
@@ -1333,12 +1435,30 @@ class LazyTangentSpace:
             yield ZZ.valuation(p).extensions(self.base_ring())[0]
 
     def _require_dimension(self):
+        r"""
+        Ensure that all the dimension reported by this tangent space
+        incorporated all the data submitted via the ``_update_dimension...()``
+        calls.
+
+        Automatically called when :meth:`dimension` is accessed.
+        """
         for item in self._pending_for_dimension:
             self._update_dimension(item)
 
         self._pending_for_dimension = []
 
     def _require_basis(self, require_dimension=True):
+        r"""
+        Ensure that the basis reported by this tangent space incorporated all
+        the data submitted via the ``_update_dimension...()`` calls.
+
+        Automatically called when :meth:`basis` is accessed.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         if require_dimension:
             self._require_dimension()
 
@@ -1348,16 +1468,49 @@ class LazyTangentSpace:
         self._pending_for_basis = []
 
     def dimension(self):
+        r"""
+        Return the current dimension of this tangent space.
+
+        EXAMPLES::
+
+            # TODO
+
+        """
         self._require_dimension()
 
         return self._U_bar.nrows()
 
     def basis(self):
+        r"""
+        Return a basis of the currently known tangent space as relative
+        cohomology classes.
+
+        EXAMPLES::
+
+            # TODO
+
+        """
         self._require_basis()
 
+        # TODO: Ensure that these are actually cohomology classes
         return self._basis[:]
 
     def _update_dimension(self, item):
+        r"""
+        Incorporate ``item`` into the known dimension of this tangent space.
+
+        This is a helper method for :meth:`_require_dimension`.
+
+        .. SEEALSO::
+
+            :meth:`update_basis` for the corresponding operation to incorporate
+            information into the currently known basis.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         if isinstance(item, tuple):
             increases = self._update_dimension_from_decomposition(*item)
         else:
@@ -1366,6 +1519,20 @@ class LazyTangentSpace:
         self._pending_for_basis.append((item, increases))
 
     def _update_dimension_from_decomposition(self, circumferences, module_fractions) -> list[int]:
+        r"""
+        Incorporate the cylinder ``circumferences`` and their moduli into known
+        dimension of this tangent space.
+
+        This is a helper method for :meth:`_update_dimension`.
+
+        Return the indexes of the tangent space vectors extracted from the data
+        that actually lead to an increase in the dimension.
+
+        EXAMPLES::
+
+            # TODO
+
+        """
         increases = []
 
         for i, v in enumerate(self.cylinder_deformation_subspace(circumferences, module_fractions, reduced=True)):
@@ -1375,6 +1542,17 @@ class LazyTangentSpace:
         return increases
 
     def _reduce_vector(self, v):
+        r"""
+        Return a reduction of the vector ``v`` (defined over the
+        :meth:`base_ring`) modulo a big prime ideal.
+
+        This is a helper method for :meth:`_update_dimension_from_vector`.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         assert v.base_ring() is self.base_ring(), f"Expected vector over {self.base_ring()} but found vector over {v.base_ring()}"
 
         while True:
@@ -1386,6 +1564,18 @@ class LazyTangentSpace:
                 self._require_p(force_next=True)
 
     def _decomposition(self, v):
+        r"""
+        Write ``v`` as a linear combination over a transcendental basis.
+
+        This is a trivial operation unless working over exact-real rings.
+
+        This is a helper method for :meth:`_update_dimension_from_vector`.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         # TODO: Fix upstream in pyflatsurf
         if v.base_ring() is QQ:
             return [(QQ.one(), v)]
@@ -1397,6 +1587,18 @@ class LazyTangentSpace:
         return Vectors(self._surface_base_ring).decomposition(v)
 
     def _update_dimension_from_vector(self, v) -> list[int]:
+        r"""
+        Incorporate a direction ``v`` in the tangent space into the known
+        dimension of this tangent space.
+
+        This is a helper method for :meth:`_update_dimension`.
+
+        EXAMPLES::
+
+            TODO
+
+        """
+        # TODO: Ensure that v is a relative cohomology class and document that.
         assert v.base_ring() is self._surface_base_ring
 
         decompositions = []
@@ -1415,6 +1617,16 @@ class LazyTangentSpace:
         return decompositions
 
     def _update_dimension_from_reduced_vector(self, v) -> bool:
+        r"""
+        Incorporate a direction ``v`` in the tangent space (reduced module a
+        prime) into the known dimension of this tangent space.
+
+        This is a helper method for :meth:`_update_dimension_from_vector`.
+
+        EXAMPLES::
+
+            TODO
+        """
         if self._U_bar.nrows() == self._ambient_dimension:
             return False
 
@@ -1427,16 +1639,62 @@ class LazyTangentSpace:
         return True
 
     def _update_basis(self, item, rows: list[int]):
+        r"""
+        Enlarge the recorded base for this tangent space from the ``item``.
+
+        The item might encode several tangent space vectors, e.g., if it is a
+        flow decomposition or if it is a vector over some exact-reals. For that
+        purpose, ``rows`` contains the indexes of the resulting tangent space
+        vectors encoded that lead to an increase in the dimension computation
+        and are therefore the indexes that must lead to an increase in the
+        basis.
+
+        This is a helper method for :meth:`_require_basis`.
+
+        .. SEEALSO::
+
+            :meth:`_require_dimension` for the corresponding method that
+            ensures the correct dimension and also sets up the ``rows`` list
+            for this method.
+
+        EXAMPLES::
+
+            TODO
+        """
         if isinstance(item, tuple):
-            self._update_basis_from_decomposition(*item, rows)
+            assert len(item) == 2, "item must be a pair of circumferences and moduli"
+            self._update_basis_from_decomposition(item[0], item[1], rows)
         else:
             self._update_basis_from_vector(item, rows)
 
     def _update_basis_from_decomposition(self, circumferences, module_fractions, rows: list[int]):
+        r"""
+        Enlarge the recorded basis for this tangent space from the circumferences and moduli.
+
+        See :meth:`_update_basis` for the meaning of ``rows``.
+
+        This is a helper method for :meth:`_update_basis`.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         for v in self.cylinder_deformation_subspace(circumferences, module_fractions, rows=rows):
             self._basis.append(v)
 
     def _update_basis_from_vector(self, v, rows: list[int]):
+        r"""
+        Enlarge the recorded basis for this tangent space from the tangent vector ``v``.
+
+        See :meth:`_update_basis` for the meaning of ``rows``.
+
+        This is a helper method for :meth:`_update_basis`.
+
+        EXAMPLES::
+
+            TODO
+        """
         # Rewrite v as vectors over base_ring(), i.e., the underlying SageMath
         # number field. (This extracts the different components of a vector
         # over exact-real. Otherwise, this is just a simple cast between an
@@ -1452,6 +1710,18 @@ class LazyTangentSpace:
             self._basis.append(w)
 
     def _require_p(self, force_next=None):
+        r"""
+        Ensure that ``_prime`` is a prime ideal of :meth:`base_ring` such that
+        the known basis of the tangent space can be reduced module that prime.
+
+        If ``force_next`` is set, then we advance to the next prime even if
+        already had already been selected.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         if force_next or self._prime is None:
             self._require_basis(require_dimension=False)
             assert len(self._basis) == self._U_bar.nrows()
@@ -1468,9 +1738,39 @@ class LazyTangentSpace:
         return self._prime
 
     def update_from_flow_decomposition(self, circumferences, modules):
+        r"""
+        Enlarge this tangent space with the ``circumferences`` and ``modules``
+        derived from a flow decomposition.
+
+        This is a helper method for
+        :meth:`GL2ROrbitClosure.update_tangent_space_from_flow_decomposition`.
+
+        EXAMPLES::
+
+            TODO
+
+        """
+        # TODO: Should circumferences and modules be different types?
         self._pending_for_dimension.append((circumferences, modules))
 
     def update_from_vector(self, v):
+        # TODO: Actually make v be a rel cohomology class.
+        r"""
+        Enlarge this tangent space with the tangent space element ``v``.
+
+        This is a helper method for
+        :meth:`GL2ROrbitClosure.update_tangent_space_from_vector`.
+
+        INPUT:
+
+        - ``v`` -- a relative cohomology class representing a direction in the
+          tangent space.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         if len(v) != self._ambient_dimension:
             raise TypeError(f"Expected vector of length {self._ambient_dimension} but found vector of length {len(v)}")
 
@@ -1486,6 +1786,13 @@ class LazyTangentSpace:
         denominators `d_i`, return a list of fractions `c n_i/d_i` scaled
         uniformly such that the value can be represented in the underlying
         ring.
+
+        This is a helper method for meth:`cylinder_deformation_subspace`.
+
+        EXAMPLES::
+
+            TODO
+
         """
         fractions = list(fractions)
         try:
@@ -1502,6 +1809,13 @@ class LazyTangentSpace:
         Return the rational coefficients of `x` over its implicit basis,
         e.g., if `x` is in a number field K, return the coefficients of x
         in `K` as a vector space over the rationals.
+
+        This is a helper method for :meth:`cylinder_deformation_subspace`.
+
+        EXAMPLES::
+
+            TODO
+
         """
         if x.parent() in [ZZ, QQ]:
             ret = [QQ(x)]
@@ -1536,6 +1850,20 @@ class LazyTangentSpace:
         return ret
 
     def _cylinder_deformation_subspace_unify_parent(self, modules):
+        r"""
+        Return all ``modules`` as elements of the same parent.
+
+        This is a helper method for :meth:`cylinder_deformation_subspace`.
+
+        INPUT::
+
+        - ``modules`` -- pairs of elements, encoding ``width`` and ``height``.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         if hasattr(modules[0], "_backend"):
             # Make sure all modules live in the same K-Module so that .coefficients() below produces coefficient lists of the same length.
             from functools import reduce
@@ -1553,6 +1881,18 @@ class LazyTangentSpace:
         return modules
 
     def _cylinder_deformation_subspace_reduce(self, relations, circumferences, decomposed_denominators):
+        r"""
+        Return the provided data reduced module the prime ideal returned by :meth:`_require_p`.
+
+        This is a helper method for :meth:`cylinder_deformation_subspace` used
+        to speed up computations by then performing computations in a finite
+        field instead of an unwieldy number field.
+
+        EXAMPLES::
+
+            TODO
+
+        """
         assert all(denominator.parent() is self.base_ring() for denominators in decomposed_denominators for denominator in denominators)
 
         while True:
@@ -1574,8 +1914,23 @@ class LazyTangentSpace:
 
             return reduced_relations, reduced_circumferences, reduced_denominators
 
-
     def cylinder_deformation_subspace(self, circumferences, module_fractions, reduced=False, rows=None):
+        r"""
+        Return tangent vectors obtained from the cylinder ``circumferences``
+        and their corresponding moduli ``module_fractions``.
+
+        INPUT:
+
+        - ``circumferences`` -- TODO
+        - ``module_fractions`` -- TODO
+        - ``reduced`` -- TODO
+        - ``rows`` -- TODO
+
+        EXAMPLES:
+
+            TODO
+
+        """
         assert len(circumferences) == len(module_fractions)
 
         if not module_fractions:
@@ -1619,7 +1974,13 @@ class LazyTangentSpace:
         r"""
         Compute the right kernel of the rational matrix `M`.
 
-        See https://github.com/flatsurf/sage-flatsurf/issues/100.
+        This speeds up the unfortunate algorithm selection in upstream
+        SageMath, see https://github.com/flatsurf/sage-flatsurf/issues/100.
+
+        EXAMPLES::
+
+            TODO
+
         """
         M = M._clear_denom()[0]
 
@@ -1660,6 +2021,12 @@ class LazyTangentSpace:
         r"""
         Compute the left kernel of the rational matrix `M`.
 
-        See https://github.com/flatsurf/sage-flatsurf/issues/100.
+        This speeds up the unfortunate algorithm selection in upstream
+        SageMath, see https://github.com/flatsurf/sage-flatsurf/issues/100.
+
+        EXAMPLES::
+
+            TODO
+
         """
         return LazyTangentSpace._right_kernel_matrix(M.transpose())
