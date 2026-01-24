@@ -1173,7 +1173,7 @@ class GL2ROrbitClosure:
         return A, sc_index, proj
 
     def cylinder_circumferences(self, decomposition):
-        # TODO: Return relative homology classes.
+        # TODO: Return relative homology classes. (Though they actually lift to elements of absolute homology which we could assert maybe.)
         # TODO: This is just a base change applied to the relative homology induced by decomposition. Maybe we could model it there trivially.
         kz = self.flow_decomposition_kontsevich_zorich_cocycle(decomposition)
 

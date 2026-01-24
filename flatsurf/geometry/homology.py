@@ -60,7 +60,8 @@ https://github.com/flatsurf/sage-flatsurf/issues/166)::
     sage: cylinder = D.cylinders()[0]  # optional: pyflatsurf
 
     sage: H = SimplicialHomology(S)
-    sage: core = sum(int(str(chain[edge])) * H(conversion.section(edge.positive())) for segment in cylinder.right() for chain in [segment.saddleConnection().chain()] for edge in T.edges())  # optional: pyflatsurf
+    sage: C = H.chain
+    sage: core = H(sum(int(str(chain[edge])) * C(conversion.section(edge.positive())) for segment in cylinder.right() for chain in [segment.saddleConnection().chain()] for edge in T.edges()))  # optional: pyflatsurf
     sage: core  # optional: pyflatsurf  # random output, the chosen generators vary between operating systems
     972725347814111665129717*B[((0, -1/2*c0, -1/2*c0^2 + 3/2), 2)] + 587352809047576581321682*B[((0, -1/2*c0^2 + 1, -1/2*c0^3 + 3/2*c0), 2)] + 60771110563809382932401*B[((0, -1/2*c0^2 + 1, 1/2*c0^3 - 3/2*c0), 2)] ...
 
@@ -69,7 +70,7 @@ https://github.com/flatsurf/sage-flatsurf/issues/166)::
 ######################################################################
 #  This file is part of sage-flatsurf.
 #
-#        Copyright (C) 2022-2024 Julian Rüth
+#        Copyright (C) 2022-2026 Julian Rüth
 #                           2023 Julien Boulanger
 #
 #  sage-flatsurf is free software: you can redistribute it and/or modify
@@ -103,7 +104,8 @@ class SimplicialHomologyClass(Element):
 
     - ``parent`` -- a :class:`SimplicialHomology`
 
-    - ``chain`` -- an element of the :meth:`SimplicialHomologyGroup.chain_module`.
+    - ``coefficients`` -- a vector of coefficients in the base ring, one for
+      each element of the homology's generators.
 
     EXAMPLES::
 
@@ -138,10 +140,12 @@ class SimplicialHomologyClass(Element):
 
     """
 
-    def __init__(self, parent, chain):
+    def __init__(self, parent, coefficients):
         super().__init__(parent)
 
-        self._chain = chain
+        assert len(coefficients) == parent.ngens()
+
+        self._coefficients = coefficients
 
     def algebraic_intersection(self, other):
         r"""
@@ -173,13 +177,14 @@ class SimplicialHomologyClass(Element):
 
             sage: S = translation_surfaces.cathedral(1, 4)
             sage: H = SimplicialHomology(S)
+            sage: C = H.chain
             sage: a = H((0, 3))
             sage: b = H((2, 1))
             sage: a.algebraic_intersection(b)
             0
 
             sage: a = H((0, 3))
-            sage: b = H((3, 4)) + 3 * H((0, 3)) + 2 * H((0, 0)) - H((1, 7)) + 7 * H((2, 1)) - 2 * H((2, 2))
+            sage: b = H(C((3, 4)) + 3 * C((0, 3)) + 2 * C((0, 0)) - C((1, 7)) + 7 * C((2, 1)) - 2 * C((2, 2)))
             sage: a.algebraic_intersection(b)
             2
 
@@ -198,8 +203,8 @@ class SimplicialHomologyClass(Element):
 
         intersection = 0
 
-        multiplicities = dict(self._chain)
-        other_multiplicities = dict(other._chain)
+        multiplicities = dict(self.chain())
+        other_multiplicities = dict(other.chain())
 
         for vertex in self.parent().surface().vertices():
             counter = 0
@@ -243,9 +248,8 @@ class SimplicialHomologyClass(Element):
 
         """
         del self_on_left  # parameter intentionally ignored, the side does not matter
-        return self.parent()(c * self._chain)
+        return self.parent()(c * self._coefficients)
 
-    @cached_method
     def coefficients(self):
         r"""
         Return the coefficients of this element in terms of the generators of homology.
@@ -261,8 +265,7 @@ class SimplicialHomologyClass(Element):
             (0, 1)
 
         """
-        _, _, to_homology = self.parent()._homology()
-        return tuple(to_homology(self._chain))
+        return tuple(self._coefficients)
 
     def _richcmp_(self, other, op):
         r"""
@@ -325,8 +328,9 @@ class SimplicialHomologyClass(Element):
             B[(0, 1)]
 
         """
-        return repr(self._chain)
+        return repr(self.chain())
 
+    @cached_method
     def chain(self):
         r"""
         Return a lift of this element to the
@@ -355,7 +359,16 @@ class SimplicialHomologyClass(Element):
             (-1, 1)
 
         """
-        return self._chain
+        homology, to_chain, _ = self.parent()._homology()
+        
+        try:
+            # When over a PID
+            linear_combination = homology.linear_combination_of_smith_form_gens
+        except AttributeError:
+            # When over a field
+            linear_combination = homology.linear_combination_of_basis
+
+        return to_chain(linear_combination(self._coefficients))
 
     def coefficient(self, gen):
         r"""
@@ -404,7 +417,7 @@ class SimplicialHomologyClass(Element):
             B[(0, 0)] + B[(0, 1)]
 
         """
-        return self.parent()(self._chain + other._chain)
+        return self.parent()(self._coefficients + other._coefficients)
 
     def _sub_(self, other):
         r"""
@@ -420,7 +433,7 @@ class SimplicialHomologyClass(Element):
             -B[(0, 0)] + B[(0, 1)]
 
         """
-        return self.parent()(self._chain - other._chain)
+        return self.parent()(self._coefficients - other._coefficients)
 
     def _neg_(self):
         r"""
@@ -438,7 +451,7 @@ class SimplicialHomologyClass(Element):
             -B[(0, 0)] - B[(0, 1)]
 
         """
-        return self.parent()(-self._chain)
+        return self.parent()(-self._coefficients)
 
     def surface(self):
         r"""
@@ -472,7 +485,43 @@ class SimplicialHomologyClass(Element):
             False
 
         """
-        return bool(self._chain)
+        return bool(self._coefficients)
+
+    def __setstate__(self, state):
+        r"""
+        Helper method to restore this element from a pickle.
+
+        TESTS:
+
+        Verify that we can unpickle old pickles that used to track the chain instead of the coefficient vector::
+
+            sage: from flatsurf import translation_surfaces, SimplicialHomology
+            sage: T = translation_surfaces.square_torus()
+            sage: H = SimplicialHomology(T)
+            sage: h = H.gens()[0]; h
+            B[(0, 1)]
+
+            sage: D = dict(h.__dict__)
+            sage: D["_chain"] = h.chain()
+            sage: D["coefficients"] = ...
+            sage: del D["_coefficients"]
+
+            sage: h.__setstate__((H, D))
+            sage: h
+            B[(0, 1)]
+
+        """
+        if "_chain" in state[1]:
+            assert "coefficients" in state[1]
+
+            _, _, to_homology = self.parent()._homology()
+
+            state[1]["_coefficients"] = to_homology(state[1]["_chain"]).vector()
+
+            del state[1]["coefficients"]
+            del state[1]["_chain"]
+
+        super().__setstate__(state)
 
 
 class SimplicialHomologyGroup(Parent):
@@ -625,6 +674,17 @@ class SimplicialHomologyGroup(Parent):
 
         """
         return self._surface
+
+    def chain(self, x):
+        sgn = 1
+
+        if self._k == 1:
+            if isinstance(x, tuple) and len(x) == 2:
+                if x not in self.simplices():
+                    sgn = -1
+                    x = self.surface().opposite_edge(*x)
+
+        return sgn * self.chain_module()(x)
 
     @cached_method
     def chain_module(self):
@@ -879,8 +939,8 @@ class SimplicialHomologyGroup(Parent):
         if self._implementation == "generic":
             C = self._chain_complex()
 
-            cycles = C.differential(self._k).transpose().kernel()
-            boundaries = C.differential(self._k + 1).transpose().image()
+            cycles = C.differential(self._k).transpose().kernel()  # pyright: ignore[reportAttributeAccessIssue]
+            boundaries = C.differential(self._k + 1).transpose().image()  # pyright: ignore[reportAttributeAccessIssue]
             homology = cycles.quotient(boundaries)
 
             F = self.chain_module()
@@ -895,7 +955,7 @@ class SimplicialHomologyGroup(Parent):
                 # Available on quotients of other modules
                 return vector(x.lift().lift())
 
-            from_homology = homology.module_morphism(
+            to_chain = homology.module_morphism(
                 function=lambda x: F.from_vector(lift(x)),
                 codomain=F,
             )
@@ -916,9 +976,9 @@ class SimplicialHomologyGroup(Parent):
             to_homology = F.module_morphism(function=_to_homology, codomain=homology)
 
             for gen in homology.gens():
-                assert to_homology(from_homology(gen)) == gen
+                assert to_homology(to_chain(gen)) == gen
 
-            return homology, from_homology, to_homology
+            return homology, to_chain, to_homology
 
         raise NotImplementedError(
             "cannot compute homology with this implementation yet"
@@ -938,16 +998,16 @@ class SimplicialHomologyGroup(Parent):
         """
         tester = self._tester(**options)
 
-        homology, from_homology, to_homology = self._homology()
+        homology, to_chain, to_homology = self._homology()
         chains = self.chain_module()
 
         tester.assertEqual(homology, to_homology.codomain())
-        tester.assertEqual(homology, from_homology.domain())
+        tester.assertEqual(homology, to_chain.domain())
         tester.assertEqual(chains, to_homology.domain())
-        tester.assertEqual(chains, from_homology.codomain())
+        tester.assertEqual(chains, to_chain.codomain())
 
         for gen in homology.gens():
-            tester.assertEqual(to_homology(from_homology(gen)), gen)
+            tester.assertEqual(to_homology(to_chain(gen)), gen)
 
     def _repr_(self):
         r"""
@@ -1025,18 +1085,23 @@ class SimplicialHomologyGroup(Parent):
             B[0]
 
         """
+        M = self.base_ring() ** self.ngens()
+
         if x == 0 or x is None:
-            return self.element_class(self, self.chain_module().zero())
+            return self.element_class(self, M.zero())
+
+        homology, _, to_homology = self._homology()
 
         if self._k == 1 and isinstance(x, tuple) and len(x) == 2:
-            sgn = 1
-            if x not in self.simplices():
-                x = self.surface().opposite_edge(*x)
-                sgn = -1
-            assert x in self.simplices()
-            return sgn * self.element_class(self, self.chain_module()(x))
+            x = self.chain(x)
 
         if x.parent() is self.chain_module():
+            x = to_homology(x)
+
+        if x.parent() is homology:
+            x = M(x._vector_())
+
+        if x.parent() is M:
             return self.element_class(self, x)
 
         try:
@@ -1080,8 +1145,8 @@ class SimplicialHomologyGroup(Parent):
         if self._k < 0 or self._k > 2:
             return ()
 
-        homology, from_homology, _ = self._homology()
-        return tuple(self(from_homology(g)) for g in homology.gens())
+        homology, to_chain, _ = self._homology()
+        return tuple(self(to_chain(g)) for g in homology.gens())
 
     def ngens(self):
         r"""
@@ -1097,7 +1162,8 @@ class SimplicialHomologyGroup(Parent):
             2
 
         """
-        return len(self.gens())
+        homology, _, _ = self._homology()
+        return homology.ngens()
 
     def degree(self):
         r"""
