@@ -121,6 +121,11 @@ class GL2ROrbitClosure:
                 "cannot compute orbit closure of a non-translation surface"
                 )
 
+        if not surface.is_connected():
+            raise NotImplementedError(
+                "cannot compute orbit closures for non-connected surfaces"
+            )
+
         self._surface = surface
 
         # TODO: Drop all this and use homology machinery instead.
@@ -564,6 +569,7 @@ class GL2ROrbitClosure:
     def absolute_homology(self):
         # TODO: Implement in homology, i.e., provide the mapping from relative to absolute homology.
         # TODO: Note that this is not used anywhere.
+        # TODO: Note that the basis of homology here comes from the basis of relative homology, namely this understands the absolute homology as the kernel of the boundary map on the relative homology, see the sequence 0 -> H_1(S) -> H_1(S,Σ) -δ> H_0(Σ) -> H_0(S) = Ζ -> 0 for a connected S.
         vert_index = {v: i for i, v in enumerate(self._flat_triangulation().vertices())}
         m = len(vert_index)
         if m == 1:
