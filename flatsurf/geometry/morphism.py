@@ -1458,7 +1458,16 @@ class SurfaceMorphism(Morphism):
 
         EXAMPLES::
 
-            TODO
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: morphism = S.apply_matrix(matrix([[2, 0], [0, 1]]), in_place=False)
+
+            sage: from flatsurf import SimplicialHomology
+            sage: H = SimplicialHomology(morphism.codomain())
+            sage: c = H.chain((0, 0))
+
+            sage: morphism._image_chain(c, codomain=morphism.codomain().homology())
+            B[(0, 0)]
 
         """
         image = codomain.chain_module().zero()
@@ -1478,7 +1487,16 @@ class SurfaceMorphism(Morphism):
 
         EXAMPLES::
 
-            TODO
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: morphism = S.apply_matrix(matrix([[2, 0], [0, 1]]), in_place=False)
+
+            sage: from flatsurf import SimplicialHomology
+            sage: H = morphism.codomain().homology()
+            sage: c = H.chain((0, 0))
+
+            sage: morphism._section_chain(c, codomain=morphism.domain().homology())
+            B[(0, 0)]
 
         """
         return SurfaceMorphism._image_chain(
@@ -2057,7 +2075,18 @@ class CompositionMorphism(SurfaceMorphism):
 
         EXAMPLES::
 
-            TODO
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.regular_octagon()
+            sage: f = S.triangulate()
+            sage: T = f.codomain()
+            sage: g = T.delaunay_triangulate()
+
+            sage: H = S.homology()
+            sage: h = g * f
+
+            sage: c = H.chain((0, 0))
+            sage: h._image_chain(c, codomain=h.codomain().homology())
+            B[((0, 0), 0)]
 
         """
         for morphism in self._morphisms:
