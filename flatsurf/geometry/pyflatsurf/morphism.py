@@ -110,7 +110,7 @@ class Morphism_to_pyflatsurf(SurfaceMorphism):
             B[((1, 2, 3), 0)]
 
         """
-        return codomain.chain(self._image_edge(label, edge))
+        return codomain(self._image_edge(label, edge))
 
     def section(self):
         r"""
@@ -261,7 +261,7 @@ class Morphism_from_pyflatsurf(SurfaceMorphism):
             sage: from flatsurf import translation_surfaces
             sage: S = translation_surfaces.veech_double_n_gon(5).triangulate().codomain()
             sage: from_pyflatsurf = S.pyflatsurf().section()  # optional: pyflatsurf
-            sage: from_pyflatsurf._image_chain_edge((1, 2, 3), 0, codomain=from_pyflatsurf.codomain().homology())  # optional: pyflatsurf
+            sage: from_pyflatsurf._image_chain_edge((1, 2, 3), 0, codomain=from_pyflatsurf.codomain().chains())  # optional: pyflatsurf
             B[((0, 0), 0)]
 
         """
@@ -271,7 +271,7 @@ class Morphism_from_pyflatsurf(SurfaceMorphism):
 
         half_edge = pyflatsurf.flatsurf.HalfEdge(int(half_edge))
 
-        return codomain.chain(self._pyflatsurf_conversion._preimage_half_edge(half_edge))
+        return codomain(self._pyflatsurf_conversion._preimage_half_edge(half_edge))
 
     def _repr_type(self):
         r"""
@@ -466,7 +466,7 @@ class Morphism_Deformation(SurfaceMorphism):
 
         path = path.value()
 
-        image = codomain.chain_module().zero()
+        image = codomain.zero()
         for step in path:
             chain = step.chain()
             for edge, coefficient in chain:
@@ -482,7 +482,7 @@ class Morphism_Deformation(SurfaceMorphism):
                 label = type(self.codomain())._normalize_label(face)
                 edge = label.index(half_edge)
 
-                image += coefficient * codomain.chain((label, edge))
+                image += coefficient * codomain((label, edge))
 
         return image
 
