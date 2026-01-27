@@ -1425,6 +1425,7 @@ class SimplicialHomologyGroup(Parent):
 
         if isinstance(f, SurfaceMorphism):
             if codomain is None:
+                # TODO: This is wrong.
                 codomain = f.codomain().homology()
 
             if codomain.surface() is not f.codomain():
@@ -2535,6 +2536,7 @@ class SimplicialChainModule(Parent):
 
         if isinstance(f, SurfaceMorphism):
             if codomain is None:
+                # TODO: This is wrong.
                 codomain = f.codomain().chains()
 
             if codomain.surface() is not f.codomain():

@@ -97,7 +97,7 @@ class Morphism_to_pyflatsurf(SurfaceMorphism):
         edge = label.index(half_edge)
         return (label, edge)
 
-    def _image_chain_edge(self, label, edge, codomain):
+    def _image_chain_edge(self, label, edge, domain, codomain):
         r"""
         Implements :meth:`SurfaceMorphism._image_chain_edge`.
 
@@ -106,7 +106,7 @@ class Morphism_to_pyflatsurf(SurfaceMorphism):
             sage: from flatsurf import translation_surfaces
             sage: S = translation_surfaces.veech_double_n_gon(5).triangulate().codomain()
             sage: to_pyflatsurf = S.pyflatsurf()  # optional: pyflatsurf
-            sage: to_pyflatsurf._image_chain_edge((0, 0), 0, codomain=to_pyflatsurf.codomain().chains())  # optional: pyflatsurf
+            sage: to_pyflatsurf._image_chain_edge((0, 0), 0, domain=S.chains(), codomain=to_pyflatsurf.codomain().chains())  # optional: pyflatsurf
             [((1, 2, 3), 0)]
 
         """
@@ -252,7 +252,7 @@ class Morphism_from_pyflatsurf(SurfaceMorphism):
         edge = label.index(half_edge)
         return (label, edge)
 
-    def _image_chain_edge(self, label, edge, codomain):
+    def _image_chain_edge(self, label, edge, domain, codomain):
         r"""
         Implements :meth:`SurfaceMorphism._image_chain_edge`.
 
@@ -261,7 +261,7 @@ class Morphism_from_pyflatsurf(SurfaceMorphism):
             sage: from flatsurf import translation_surfaces
             sage: S = translation_surfaces.veech_double_n_gon(5).triangulate().codomain()
             sage: from_pyflatsurf = S.pyflatsurf().section()  # optional: pyflatsurf
-            sage: from_pyflatsurf._image_chain_edge((1, 2, 3), 0, codomain=from_pyflatsurf.codomain().chains())  # optional: pyflatsurf
+            sage: from_pyflatsurf._image_chain_edge((1, 2, 3), 0, domain=S.chains(), codomain=from_pyflatsurf.codomain().chains())  # optional: pyflatsurf
             [((0, 0), 0)]
 
         """
@@ -428,7 +428,7 @@ class Morphism_Deformation(SurfaceMorphism):
         """
         return repr(self._deformation)
 
-    def _image_chain_edge(self, label, edge, codomain):
+    def _image_chain_edge(self, label, edge, domain, codomain):
         r"""
         Implements :meth:`SurfaceMorphism._image_chain_edge`.
 
