@@ -20,7 +20,8 @@
 
 * Fixed error when calling ``FlatTriangulationConversion.vector_space_conversion`` for some exact-real surfaces.
 * Fixed ``pyflatsurf()`` for pyflatsurf backed surfaces.
-* Fixed homology classes to check whether they are actually cycles and not just an arbitrary chain. (This is a side effect of using an homology basis to represent homology classes. As a side effect, one cannot build homology classes by doing ``H((label, edge)) + H((label', edge'))`` if the summands are not cycles. Instead, one needs to build this from chains, e.g., ``C = H.chain; H(C((label, edge)) + +C((label', edge')))`.
+* Fixed homology classes to check whether they are actually cycles and not just an arbitrary chain. (This is a side effect of using an homology basis to represent homology classes. As a side effect, one cannot build homology classes by doing ``H((label, edge)) + H((label', edge'))`` if the summands are not cycles. Instead, one needs to build this from chains, e.g., ``C = H.chain; H(C((label, edge)) + +C((label', edge')))``.
+* Fixed multiplication of homomorphisms in homology by scalars.
 
 **Performance:**
 

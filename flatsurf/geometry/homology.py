@@ -298,7 +298,13 @@ class SimplicialHomologyClass(Element):
 
     def __eq__(self, other):
         r"""
-        Return whether this class is equal to ``other``.
+        Return whether this class is indistinguishable from ``other``.
+
+        .. NOTE::
+
+            We cannot implement ``_richcmp_`` since we have to handle elements
+            with differing parents here. Also, we cannot implement
+            ``__richcmp__`` easily here since we are not in Cython.
 
         EXAMPLES::
 
@@ -307,6 +313,8 @@ class SimplicialHomologyClass(Element):
             sage: H = SimplicialHomology(T)
             sage: H.gens()[0] == H.gens()[0]
             True
+            sage: H.gens()[0] == H.gens()[1]
+            False
 
         Since surfaces are not unique parents, this treats classes on equal
         surfaces as being equal::
@@ -333,6 +341,9 @@ class SimplicialHomologyClass(Element):
             True
 
         """
+        if self is other:
+            return True
+
         if not isinstance(other, SimplicialHomologyClass):
             return False
 
@@ -341,10 +352,12 @@ class SimplicialHomologyClass(Element):
 
         return self.coefficients() == other.coefficients()
 
+    __ne__ = object.__ne__
+
     def __hash__(self):
         r"""
         Return a hash value of this class that is compatible with
-        :meth:`_richcmp_`.
+        :meth:`__eq__`.
 
         EXAMPLES::
 
@@ -1164,12 +1177,11 @@ class SimplicialHomologyGroup(Parent):
             [0]
 
         """
-        # TODO: Also implement something for chains.
-        M = self.base_ring() ** self.ngens()
+        homology, _, to_homology = self._homology()
 
         # If x is the zero element in its parent, we return the zero homology class.
         if x == 0 or x is None:
-            return self.element_class(self, M.zero())
+            return self.element_class(self, homology.zero())
 
         # We allow cycles to be specified directly from surface data.
         try:
@@ -1177,23 +1189,14 @@ class SimplicialHomologyGroup(Parent):
         except NotImplementedError:
             pass
 
-        # TODO: Analog for 0 and 2 cycles.
-
-        homology, _, to_homology = self._homology()
-
         # We turn a chain into a quotient element (if it is a cycle.)
         if x.parent() is self.chain_module():
             if check and x.boundary():
                 raise ValueError("chain is not a cycle so it has no representation in this homology")
             x = to_homology(x.coefficients())
 
-        # We interpret a vector of the right size as a coefficient vector over
-        # the basis of homology.
-        if x.parent() is homology:
-            x = M(x._vector_())
-
         # We interpret a coefficient vector as a homology element.
-        if x.parent() is M:
+        if x.parent() is homology:
             if x.is_mutable():
                 x = x.parent()(x)
                 x.set_immutable()
@@ -1416,7 +1419,6 @@ class SimplicialHomologyGroup(Parent):
             [2*[(0, 0)] + [(0, 1)], [(0, 0)]]
 
         """
-        # TODO: Chains
         from flatsurf.geometry.veech_group import SurfaceMorphism
         from sage.matrix.matrix0 import Matrix
         from sage.all import Hom
@@ -1473,7 +1475,6 @@ class SimplicialHomologyGroup(Parent):
             sage: End(H)
             Endomorphisms of H₁(Translation Surface in H_1(0) built from a square)
         """
-        # TODO: Chains
         if isinstance(Y, SimplicialHomologyGroup):
             return SimplicialHomologyMorphismSpace(self, Y, category=category)
 
@@ -1658,7 +1659,13 @@ class SimplicialChain(Element):
 
     def __eq__(self, other):
         r"""
-        Return whether this chain is equal to ``other``.
+        Return whether this chain is indistinguishable from ``other``*.
+
+        .. NOTE::
+
+            We cannot implement ``_richcmp_`` since we have to handle elements
+            with differing parents here. Also, we cannot implement
+            ``__richcmp__`` easily here since we are not in Cython.
 
         EXAMPLES::
 
@@ -1693,6 +1700,9 @@ class SimplicialChain(Element):
             True
 
         """
+        if self is other:
+            return True
+
         if not isinstance(other, SimplicialChain):
             return False
 
@@ -1700,6 +1710,8 @@ class SimplicialChain(Element):
             return False
 
         return self.coefficients() == other.coefficients()
+
+    __ne__ = object.__ne__
 
     def __hash__(self):
         r"""
@@ -2292,6 +2304,12 @@ class SimplicialChainModule(Parent):
             sage: C((0, 2))
             -[(0, 0)]
 
+        Note that we do not "allow" generating chains from polygon labels
+        (since they are very likely to clash with other constructions)::
+
+            sage: C(0)
+            0
+
         """
         chains = self._chains()
 
@@ -2315,17 +2333,6 @@ class SimplicialChainModule(Parent):
                 elif self.surface().opposite_edge(*x) in self.simplices():
                     x = -chains.gen(self.simplices().index(self.surface().opposite_edge(*x)))
                     x.set_immutable()
-
-        if self._k == 2:
-            is_label = True
-            try:
-                is_label = x in self.surface().labels()
-            except TypeError:
-                # x is not hashable, it cannot be a label
-                is_label = False
-
-            if is_label:
-                raise NotImplementedError  # TODO
 
         # We allow elements to be given as vectors in the underlying free implementation.
         if x.parent() is chains:
@@ -2491,6 +2498,98 @@ class SimplicialChainModule(Parent):
 
         return f"{C_k}({X})"
 
+    def hom(self, f, codomain=None):
+        r"""
+        Return the homomorphism of chains induced by ``f``.
+
+        INPUT:
+
+        - ``f`` -- a morphism of surfaces or a matrix
+
+        - ``codomain`` -- the chains this morphism maps into
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+
+            sage: g.matrix()  # optional: pyflatsurf
+            [0 0]
+            [0 1]
+            [1 0]
+
+            sage: C.gens()
+            ([(0, 1)], [(0, 0)])
+            sage: [g(h) for h in C.gens()]  # optional: pyflatsurf
+            [[((0, 0), 1)], [((0, 0), 0)]]
+
+        """
+        from flatsurf.geometry.veech_group import SurfaceMorphism
+        from sage.matrix.matrix0 import Matrix
+        from sage.all import Hom
+
+        if isinstance(f, SurfaceMorphism):
+            if codomain is None:
+                codomain = f.codomain().chains()
+
+            if codomain.surface() is not f.codomain():
+                raise ValueError("codomain must be codomain of morphism or None")
+
+            if f.domain() is self.surface():
+                parent = Hom(self, codomain)
+                return parent.__make_element_class__(
+                    SimplicialChainMorphism_induced
+                )(parent, f)
+        elif isinstance(f, Matrix):
+            if codomain is None:
+                if f.is_square():
+                    codomain = self
+
+            if codomain is None:
+                raise NotImplementedError("cannot deduce codomain from this matrix")
+
+            if f.ncols() != self.ngens():
+                raise ValueError(
+                    "matrix must have one column for each generator of homology"
+                )
+
+            if f.nrows() != codomain.ngens():
+                raise ValueError(
+                    "matrix must have one row for each generator of the codomain"
+                )
+
+            parent = Hom(self, codomain)
+            return parent.__make_element_class__(SimplicialChainMorphism_matrix)(
+                parent, f
+            )
+
+        raise NotImplementedError(
+            "cannot create a morphism of chains from this data yet"
+        )
+
+    def _Hom_(self, Y, category=None):
+        r"""
+        Return the space of morphisms from these chains to ``Y``.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: C = S.chains()
+
+            sage: End(C)
+            Endomorphisms of C₁(Translation Surface in H_1(0) built from a square)
+        """
+        if isinstance(Y, SimplicialChainModule):
+            return SimplicialChainMorphismSpace(self, Y, category=category)
+
+        return super()._Hom_(Y, category=category)
+
     def __eq__(self, other):
         r"""
         Return whether these chains are indistinguishable from ``other``.
@@ -2594,7 +2693,7 @@ class SimplicialHomologyMorphismSpace(MorphismSpace):
             category=category or Hom(domain, codomain).homset_category(),
         )
 
-    def an_element(self):
+    def _an_element_(self):
         r"""
         Return some homomorphism in homology.
 
@@ -2734,6 +2833,188 @@ class SimplicialHomologyMorphismSpace(MorphismSpace):
         return f"Homomorphisms from {self.domain()!r} to {self.codomain()!r}"
 
 
+class SimplicialChainMorphismSpace(MorphismSpace):
+    r"""
+    The space of homomorphisms from the chains ``domain`` to ``codomain``.
+
+    EXAMPLES::
+
+        sage: from flatsurf import translation_surfaces
+        sage: S = translation_surfaces.square_torus()
+        sage: f = S.triangulate()
+
+        sage: from flatsurf import SimplicialChains
+        sage: C = SimplicialChains(S)
+        sage: g = C.hom(f)
+        sage: G = g.parent()
+
+    Since these are homomorphisms of chains, they preserve the linear
+    structure::
+
+        sage: g.category()
+        Category of homsets of modules over Integer Ring
+
+    TESTS::
+
+        sage: from flatsurf.geometry.homology import SimplicialChainMorphismSpace
+        sage: isinstance(G, SimplicialChainMorphismSpace)
+        True
+
+        sage: TestSuite(G).run()
+
+    """
+
+    def __init__(self, domain, codomain, category=None):
+        from sage.all import Hom
+
+        super().__init__(
+            domain,
+            codomain,
+            category=category or Hom(domain, codomain).homset_category(),
+        )
+
+    def _an_element_(self):
+        r"""
+        Return some homomorphism of chains.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: T = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+
+            sage: End(S.chains()).an_element()
+            Generic endomorphism of C₁(Translation Surface in H_1(0) built from a square)
+              Defn: [1 0]
+                    [0 1]
+
+            sage: Hom(S.chains(), T.chains()).an_element()
+            Generic morphism:
+              From: C₁(Translation Surface in H_1(0) built from a square)
+              To:   C₁(Translation Surface in H_2(2) built from 3 squares)
+              Defn: [0 0]
+                    [0 0]
+                    [0 0]
+                    [0 0]
+                    [0 0]
+                    [0 0]
+
+        """
+        if self.domain() is self.codomain():
+            return self.identity()
+        return self.zero()
+
+    def identity(self):
+        r"""
+        Return the identity homomorphism in this space (if it exists).
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: T = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+
+            sage: End(S.chains()).identity()
+            Generic endomorphism of C₁(Translation Surface in H_1(0) built from a square)
+              Defn: [1 0]
+                    [0 1]
+
+        """
+        if self.is_endomorphism_set():
+            from sage.all import identity_matrix
+
+            matrix = identity_matrix(
+                self.codomain().base_ring(), self.domain().ngens(), sparse=True
+            )
+            return self.__make_element_class__(SimplicialChainMorphism_matrix)(
+                self, matrix
+            )
+        return super().identity()
+
+    def zero(self):
+        r"""
+        Return the zero homomorphism.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+
+            sage: End(S.chains()).zero()
+            Generic endomorphism of C₁(Translation Surface in H_1(0) built from a square)
+              Defn: [0 0]
+                    [0 0]
+
+        """
+        from sage.all import zero_matrix
+
+        return self.domain().hom(
+            zero_matrix(
+                self.codomain().base_ring(),
+                nrows=self.codomain().ngens(),
+                ncols=self.domain().ngens(),
+                sparse=True,
+            ),
+            codomain=self.codomain(),
+        )
+
+    def base_ring(self):
+        r"""
+        Return the ring over which these homomorphisms are defined.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+
+            sage: End(S.chains()).base_ring()
+            Integer Ring
+
+        """
+        if self.domain().base_ring() is self.codomain().base_ring():
+            return self.domain().base_ring()
+
+        return super().base_ring()
+
+    def __reduce__(self):
+        r"""
+        Return a picklable version of this space.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+
+            sage: H = End(S.chains())
+            sage: loads(dumps(H)) == H
+            True
+
+        """
+        return SimplicialChainMorphismSpace, (
+            self.domain(),
+            self.codomain(),
+            self.homset_category(),
+        )
+
+    def __repr__(self):
+        r"""
+        Return a printable representation of this space of homomorphisms.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+
+            sage: H = End(S.chains())
+            sage: H
+            Endomorphisms of C₁(Translation Surface in H_1(0) built from a square)
+
+        """
+        if self.domain() == self.codomain():
+            return f"Endomorphisms of {self.domain()!r}"
+        return f"Homomorphisms from {self.domain()!r} to {self.codomain()!r}"
+
+
 class SimplicialHomologyMorphism_base(Morphism):
     r"""
     Base class for all homomorphisms in homology.
@@ -2842,7 +3123,7 @@ class SimplicialHomologyMorphism_base(Morphism):
             True
 
         """
-        return self.domain().hom(x * self.matrix())
+        return self.domain().hom(x * self.matrix(), codomain=self.codomain())
 
     def _neg_(self):
         r"""
@@ -2982,17 +3263,9 @@ class SimplicialHomologyMorphism_matrix(SimplicialHomologyMorphism_base):
              8*[(0, 0)] + 4*[(0, 1)]]
 
         """
-        from sage.all import vector
+        homology, _, _ = self.codomain()._homology()
 
-        image = self._matrix * vector(g.coefficients())
-
-        homology, to_chain, to_homology = self.codomain()._homology()
-
-        image = sum(
-            coefficient * gen for (coefficient, gen) in zip(image, homology.gens())
-        )
-
-        return self.codomain()(to_chain(image))
+        return self.codomain()(homology(self._matrix * g.coefficients()))
 
     def __eq__(self, other):
         r"""
@@ -3000,8 +3273,9 @@ class SimplicialHomologyMorphism_matrix(SimplicialHomologyMorphism_base):
 
         .. NOTE::
 
-            We cannot override ``_richcmp_`` since our non-uniqueness of
-            surfaces breaks the coercion framework in SageMath.
+            We cannot implement ``_richcmp_`` since we have to handle elements
+            with differing parents here. Also, we cannot implement
+            ``__richcmp__`` easily here since we are not in Cython.
 
         EXAMPLES::
 
@@ -3025,10 +3299,14 @@ class SimplicialHomologyMorphism_matrix(SimplicialHomologyMorphism_base):
             False
 
         """
+        if self is other:
+            return True
         if not isinstance(other, SimplicialHomologyMorphism_matrix):
             return False
 
         return self.parent() == other.parent() and self._matrix == other._matrix
+
+    __ne__ = object.__ne__
 
     def __hash__(self):
         r"""
@@ -3176,8 +3454,9 @@ class SimplicialHomologyMorphism_induced(SimplicialHomologyMorphism_base):
 
         .. NOTE::
 
-            We cannot override ``_richcmp_`` since our non-uniqueness of
-            surfaces breaks the coercion framework in SageMath.
+            We cannot implement ``_richcmp_`` since we have to handle elements
+            with differing parents here. Also, we cannot implement
+            ``__richcmp__`` easily here since we are not in Cython.
 
         EXAMPLES::
 
@@ -3202,10 +3481,15 @@ class SimplicialHomologyMorphism_induced(SimplicialHomologyMorphism_base):
             False
 
         """
+        if self is other:
+            return True
+
         if not isinstance(other, SimplicialHomologyMorphism_induced):
             return False
 
         return self.parent() == other.parent() and self._morphism == other._morphism
+
+    __ne__ = object.__ne__
 
     def __hash__(self):
         r"""
@@ -3224,6 +3508,504 @@ class SimplicialHomologyMorphism_induced(SimplicialHomologyMorphism_base):
             sage: H = SimplicialHomology(S)
             sage: g = H.hom(f)
             sage: h = H.hom(f)
+            sage: hash(g) == hash(h)
+            True
+
+        """
+        return hash((self.parent(), self._morphism))
+
+
+class SimplicialChainMorphism_base(Morphism):
+    r"""
+    Base class for all homomorphisms of chains.
+
+    EXAMPLES::
+
+        sage: from flatsurf import translation_surfaces
+        sage: S = translation_surfaces.square_torus()
+        sage: f = S.triangulate()
+
+        sage: from flatsurf import SimplicialChains
+        sage: C = SimplicialChains(S)
+        sage: g = C.hom(f)
+
+    TESTS::
+
+        sage: from flatsurf.geometry.homology import SimplicialChainMorphism_base
+        sage: isinstance(g, SimplicialChainMorphism_base)
+        True
+
+        sage: TestSuite(g).run()
+
+    """
+
+    @cached_method
+    def matrix(self):
+        r"""
+        Return the matrix describing this homomorphism on the generators of
+        chains (as a multiplication from the left).
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: C.gens()
+            ([(0, 1)], [(0, 0)], [(1, 1)], [(0, 3)], [(2, 0)], [(0, 2)])
+            sage: g = C.hom(f)
+
+            sage: g.matrix()
+            [ 0  0  0  0 -1  0]
+            [ 0  0 -1  0  0  0]
+            [ 0  0  0  0  0  1]
+            [ 0  0  0  0  0  0]
+            [ 1  0  0  0  0  0]
+            [ 0  0  0  0  0  0]
+            [ 0  0  0  1  0  0]
+            [ 0  0  0  0  0  0]
+            [ 0  1  0  0  0  0]
+
+        """
+        from sage.all import matrix
+
+        return matrix(
+            [list(self(gen).coefficients()) for gen in self.domain().gens()]
+        ).transpose()
+
+    def _add_(self, other):
+        r"""
+        Return the pointwise sum of this morphism and ``other``.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+
+            sage: g + g
+            Generic morphism:
+              From: C₁(Translation Surface in H_2(2) built from 3 squares)
+              To:   C₁(Triangulation of Translation Surface in H_2(2) built from 3 squares)
+              Defn: [ 0  0  0  0 -2  0]
+                    [ 0  0 -2  0  0  0]
+                    [ 0  0  0  0  0  2]
+                    [ 0  0  0  0  0  0]
+                    [ 2  0  0  0  0  0]
+                    [ 0  0  0  0  0  0]
+                    [ 0  0  0  2  0  0]
+                    [ 0  0  0  0  0  0]
+                    [ 0  2  0  0  0  0]
+
+        """
+        return self.domain().hom(
+            self.matrix() + other.matrix(), codomain=self.codomain()
+        )
+
+    def _acted_upon_(self, x, self_on_left):
+        r"""
+        Return the morphism given by pointwise multiplying with ``x``.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: f = S.triangulate()
+            sage: g = f.section()
+
+            sage: C = S.chains()
+            sage: h = C.hom(g*f)
+
+            sage: (2**1234567 * h).matrix().trace() == 6 * 2**1234567
+            True
+
+        """
+        return self.domain().hom(x * self.matrix(), codomain=self.codomain())
+
+    def _neg_(self):
+        r"""
+        Return the pointwise negative of this homomorphism.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+
+            sage: -g
+            Generic morphism:
+              From: C₁(Translation Surface in H_2(2) built from 3 squares)
+              To:   C₁(Triangulation of Translation Surface in H_2(2) built from 3 squares)
+              Defn: [ 0  0  0  0  1  0]
+                    [ 0  0  1  0  0  0]
+                    [ 0  0  0  0  0 -1]
+                    [ 0  0  0  0  0  0]
+                    [-1  0  0  0  0  0]
+                    [ 0  0  0  0  0  0]
+                    [ 0  0  0 -1  0  0]
+                    [ 0  0  0  0  0  0]
+                    [ 0 -1  0  0  0  0]
+
+        """
+        return self.domain().hom(-self.matrix(), codomain=self.codomain())
+
+    def _composition(self, other):
+        r"""
+        Return the composition of this homomorphism and ``other``.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: T = translation_surfaces.mcmullen_L(1, 1, 1, 2)
+            sage: U = translation_surfaces.mcmullen_L(1, 1, 1, 3)
+
+            sage: f = S.chains().hom(2 * identity_matrix(6), codomain=T.chains())
+            sage: g = T.chains().hom(3 * identity_matrix(6), codomain=U.chains())
+
+            sage: g * f
+            Generic morphism:
+              From: C₁(Translation Surface in H_2(2) built from 3 squares)
+              To:   C₁(Translation Surface in H_2(2) built from 2 squares and a rectangle)
+              Defn: [6 0 0 0 0 0]
+                    [0 6 0 0 0 0]
+                    [0 0 6 0 0 0]
+                    [0 0 0 6 0 0]
+                    [0 0 0 0 6 0]
+                    [0 0 0 0 0 6]
+
+        """
+        return other.domain().hom(
+            self.matrix() * other.matrix(), codomain=self.codomain()
+        )
+
+    def __bool__(self):
+        r"""
+        Return whether this is not the homommorphism that is zero everywhere.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+
+            sage: bool(g)
+            True
+
+            sage: bool(g.parent().zero())
+            False
+
+        """
+        return bool(self.matrix())
+
+
+class SimplicialChainMorphism_matrix(SimplicialChainMorphism_base):
+    r"""
+    A homomorphism of chains that is given by a matrix that describes the
+    homomorphism on the generators.
+
+    EXAMPLES::
+
+        sage: from flatsurf import translation_surfaces
+        sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+        sage: T = translation_surfaces.square_torus()
+
+        sage: f = S.chains().hom(matrix([[1, 2, 3, 4, 5, 6], [7, 8, 9, 0, 1, 2]]), codomain=T.chains())
+        sage: f
+        Generic morphism:
+          From: C₁(Translation Surface in H_2(2) built from 3 squares)
+          To:   C₁(Translation Surface in H_1(0) built from a square)
+          Defn: [1 2 3 4 5 6]
+                [7 8 9 0 1 2]
+
+    TESTS::
+
+        sage: from flatsurf.geometry.homology import SimplicialChainMorphism_matrix
+        sage: isinstance(f, SimplicialChainMorphism_matrix)
+        True
+
+        sage: TestSuite(f).run()
+
+    """
+
+    def __init__(self, parent, matrix):
+        super().__init__(parent)
+
+        if matrix.is_mutable():
+            from sage.all import matrix as copy
+
+            matrix = copy(matrix)
+            matrix.set_immutable()
+
+        self._matrix = matrix
+
+    def _call_(self, g):
+        r"""
+        Return the image of ``g`` under this homomorphism.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: T = translation_surfaces.square_torus()
+
+            sage: f = S.chains().hom(matrix([[1, 2, 3, 4, 5, 6], [7, 8, 9, 0, 1, 2]]), codomain=T.chains())
+            sage: [f(gen) for gen in S.chains().gens()]
+            [7*[(0, 0)] + [(0, 1)],
+             8*[(0, 0)] + 2*[(0, 1)],
+             9*[(0, 0)] + 3*[(0, 1)],
+             4*[(0, 1)],
+             [(0, 0)] + 5*[(0, 1)],
+             2*[(0, 0)] + 6*[(0, 1)]]
+
+        """
+        chains = self.codomain()._chains()
+
+        return self.codomain()(chains(self._matrix * g.coefficients()))
+
+    def __eq__(self, other):
+        r"""
+        Return whethir this morphism is indistinguishable from ``other``.
+
+        .. NOTE::
+
+            We cannot implement ``_richcmp_`` since we have to handle elements
+            with differing parents here. Also, we cannot implement
+            ``__richcmp__`` easily here since we are not in Cython.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+            sage: h = C.hom(g.matrix(), codomain=g.codomain())
+            sage: h == h
+            True
+
+        Note that this determines whether two morphisms are indistinguishable,
+        not whether they are pointwise the same::
+
+            sage: h == g
+            False
+
+        """
+        if self is other:
+            return True
+
+        if not isinstance(other, SimplicialChainMorphism_matrix):
+            return False
+
+        return self.parent() == other.parent() and self._matrix == other._matrix
+
+    __ne__ = object.__ne__
+
+    def __hash__(self):
+        r"""
+        Return a hash value for this morphism that is compatible with
+        :meth:`__eq__`.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: f = End(S.chains()).one()
+            sage: g = End(S.chains()).one()
+
+            sage: hash(f) == hash(g)
+            True
+
+        """
+        return hash((self.parent(), self._matrix))
+
+    def _repr_defn(self):
+        r"""
+        Helper method for :meth:`_repr_`.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.mcmullen_L(1, 1, 1, 1)
+            sage: f = End(S.chains()).one()
+            sage: f
+            Generic endomorphism of C₁(Translation Surface in H_2(2) built from 3 squares)
+              Defn: [1 0 0 0 0 0]
+                    [0 1 0 0 0 0]
+                    [0 0 1 0 0 0]
+                    [0 0 0 1 0 0]
+                    [0 0 0 0 1 0]
+                    [0 0 0 0 0 1]
+
+        """
+        return repr(self._matrix)
+
+
+class SimplicialChainMorphism_induced(SimplicialChainMorphism_base):
+    r"""
+    A homomorphism of chains induced by a morphism of surfaces.
+
+    EXAMPLES::
+
+        sage: from flatsurf import translation_surfaces
+        sage: S = translation_surfaces.square_torus()
+        sage: f = S.triangulate()
+
+        sage: from flatsurf import SimplicialChains
+        sage: C = SimplicialChains(S)
+        sage: g = C.hom(f)
+
+    TESTS::
+
+        sage: from flatsurf.geometry.homology import SimplicialChainMorphism_induced
+        sage: isinstance(g, SimplicialChainMorphism_induced)
+        True
+
+        sage: TestSuite(g).run()
+
+    """
+
+    def __init__(self, parent, morphism):
+        super().__init__(parent)
+
+        self._morphism = morphism
+
+    def _call_(self, x):
+        r"""
+        Return the image of the chain ``x`` under this morphism.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+
+            sage: C.gens()
+            ([(0, 1)], [(0, 0)])
+            sage: [g(h) for h in C.gens()]
+            [[((0, 0), 1)], [((0, 0), 0)]]
+
+        """
+        return self._morphism._image_chain(x, codomain=self.codomain())
+
+    def _repr_type(self):
+        r"""
+        Helper method for :meth:`_repr_` to produce a printable representation
+        of this homomorphism.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+            sage: g._repr_type()
+            'Induced'
+
+        """
+        return "Induced"
+
+    def _repr_defn(self):
+        r"""
+        Helper method for :meth:`_repr_` to produce a printable representation
+        of this homomorphism.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+            sage: print(g._repr_defn())
+            Induced by Triangulation morphism:
+              From: Translation Surface in H_1(0) built from a square
+              To:   Triangulation of Translation Surface in H_1(0) built from a square
+
+        """
+        return f"Induced by {self._morphism!r}"
+
+    def __eq__(self, other):
+        r"""
+        Return whether this morphism is indistinguishable from ``other``.
+
+        .. NOTE::
+
+            We cannot implement ``_richcmp_`` since we have to handle elements
+            with differing parents here. Also, we cannot implement
+            ``__richcmp__`` easily here since we are not in Cython.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+            sage: h = C.hom(f)
+
+            sage: g == h
+            True
+
+        Note that this does not compare homomorphisms pointwise::
+
+            sage: h = C.hom(g.matrix(), codomain=g.codomain())
+            sage: g == h
+            False
+
+        """
+        if self is other:
+            return True
+
+        if not isinstance(other, SimplicialChainMorphism_induced):
+            return False
+
+        return self.parent() == other.parent() and self._morphism == other._morphism
+
+    __ne__ = object.__ne__
+
+    def __hash__(self):
+        r"""
+        Return a hash value for this homomorphism that is compatible with
+        :meth:`__ne__`.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: S = translation_surfaces.square_torus()
+            sage: f = S.triangulate()
+
+            sage: from flatsurf import SimplicialChains
+            sage: C = SimplicialChains(S)
+            sage: g = C.hom(f)
+            sage: h = C.hom(f)
             sage: hash(g) == hash(h)
             True
 
