@@ -1215,7 +1215,7 @@ class SurfaceMorphism(Morphism):
             sage: a, b = H.gens()
 
             sage: H.hom(morphism)(a)
-            B[(0, 1)]
+            [(0, 1)]
 
         """
         if g.parent().surface() is not self.domain():
@@ -1263,9 +1263,9 @@ class SurfaceMorphism(Morphism):
             sage: H = SimplicialHomology(T)
             sage: a, b = H.gens()
             sage: a
-            B[(0, 1)]
+            [(0, 1)]
             sage: H.hom(morphism * morphism.section())(a)
-            B[(0, 1)]
+            [(0, 1)]
 
         """
         return SurfaceMorphism._image_homology(self.section(), h, codomain=codomain)
@@ -1402,9 +1402,9 @@ class SurfaceMorphism(Morphism):
             sage: a, b = H.gens()
 
             sage: morphism._image_homology_gen(a, codomain=morphism.codomain().homology())
-            B[(0, 1)]
+            [(0, 1)]
             sage: morphism._image_homology_gen(b, codomain=morphism.codomain().homology())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         assert codomain.surface() is self.codomain()
@@ -1434,7 +1434,7 @@ class SurfaceMorphism(Morphism):
             sage: a, b = H.gens()
 
             sage: morphism._section_homology_gen(a, codomain=S.homology())
-            B[(0, 1)]
+            [(0, 1)]
 
         """
         return SurfaceMorphism._image_homology(self.section(), gen, codomain=codomain)
@@ -1466,7 +1466,7 @@ class SurfaceMorphism(Morphism):
             sage: c = C((0, 0))
 
             sage: morphism._image_chain(c, codomain=morphism.codomain().homology())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         image = codomain.zero()
@@ -1492,7 +1492,7 @@ class SurfaceMorphism(Morphism):
             sage: c = C((0, 0))
 
             sage: morphism._section_chain(c, codomain=morphism.domain().homology())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         return SurfaceMorphism._image_chain(
@@ -1520,9 +1520,9 @@ class SurfaceMorphism(Morphism):
             sage: morphism = S.apply_matrix(matrix([[2, 0], [0, 1]]), in_place=False)
 
             sage: morphism._image_chain_edge(0, 0, codomain=morphism.codomain().chains())
-            B[(0, 0)]
+            [(0, 0)]
             sage: morphism._image_chain_edge(0, 1, codomain=morphism.codomain().chains())
-            B[(0, 1)]
+            [(0, 1)]
 
         """
         raise NotImplementedError(
@@ -1548,7 +1548,7 @@ class SurfaceMorphism(Morphism):
             sage: morphism = S.apply_matrix(matrix([[2, 0], [0, 1]]), in_place=False)
 
             sage: morphism._section_chain_edge(0, 0, codomain=S.homology())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         domain = self.codomain().chains()
@@ -1805,7 +1805,7 @@ class SectionMorphism(SurfaceMorphism):
             sage: g = f.section()
 
             sage: g._image_chain_edge((0, 0), 0, codomain=S.chains())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         return self._morphism._section_chain_edge(label, edge, codomain=codomain)
@@ -1822,7 +1822,7 @@ class SectionMorphism(SurfaceMorphism):
             sage: g = f.section()
 
             sage: g._section_chain_edge(0, 0, codomain=f.codomain().chains())
-            B[((0, 0), 0)]
+            [((0, 0), 0)]
 
         """
         return self._morphism._image_chain_edge(label, edge, codomain=codomain)
@@ -2082,13 +2082,13 @@ class CompositionMorphism(SurfaceMorphism):
             sage: C = S.chains()
             sage: c = C((0, 0))
             sage: h._image_chain(c, codomain=h.codomain().chains())
-            B[((0, 0), 0)]
+            [((0, 0), 0)]
 
         """
         for morphism in self._morphisms:
             chain = morphism._image_chain(chain, morphism.codomain().homology())
 
-        return codomain.chain_module()(chain)
+        return codomain(chain)
 
     def _image_chain_edge(self, label, edge, codomain):
         r"""
@@ -2102,12 +2102,12 @@ class CompositionMorphism(SurfaceMorphism):
             sage: T = f.codomain()
             sage: g = T.delaunay_triangulate()
 
-            sage: g._image_chain_edge((0, 0), 0, codomain=g.codomain().homology())
-            B[((0, 0), 0)]
+            sage: g._image_chain_edge((0, 0), 0, codomain=g.codomain().chains())
+            [((0, 0), 0)]
 
         """
         return self._image_chain(
-            self.domain().homology().chain((label, edge)), codomain=codomain
+            self.domain().chains()((label, edge)), codomain=codomain
         )
 
     def _repr_type(self):
@@ -2321,7 +2321,7 @@ class IdentityMorphism(SurfaceMorphism, IdentityMorphism_sage):
             sage: S = translation_surfaces.square_torus()
             sage: f = End(S).identity()
             sage: f._image_chain_edge(0, 0, codomain=S.chains())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         return codomain((label, edge))
@@ -2446,7 +2446,7 @@ class SurfaceMorphism_factorization(SurfaceMorphism):
 
             sage: a, b = S.homology().gens()
             sage: f._image_homology(a)
-            -B[((0, 0), 0)] - B[((0, 0), 2)]
+            -[((0, 0), 0)] - [((0, 0), 2)]
 
         """
         return self._factorization()._image_homology(g, codomain=codomain)
@@ -2464,7 +2464,7 @@ class SurfaceMorphism_factorization(SurfaceMorphism):
 
             sage: a, b = f.codomain().homology().gens()
             sage: f._section_homology(a)
-            -B[(0, 0)] - B[(0, 1)]
+            -[(0, 0)] - [(0, 1)]
 
         """
         return self._factorization()._section_homology(h, codomain=codomain)
@@ -2528,7 +2528,7 @@ class SurfaceMorphism_factorization(SurfaceMorphism):
 
             sage: a, b = S.homology().gens()
             sage: f._image_homology_gen(a, codomain=f.codomain().homology())
-            -B[((0, 0), 0)] - B[((0, 0), 2)]
+            -[((0, 0), 0)] - [((0, 0), 2)]
 
         """
         assert codomain.surface() is self.codomain()
@@ -2548,7 +2548,7 @@ class SurfaceMorphism_factorization(SurfaceMorphism):
 
             sage: a, b = f.codomain().homology().gens()
             sage: f._section_homology_gen(a, codomain=S.homology())
-            -B[(0, 0)] - B[(0, 1)]
+            -[(0, 0)] - [(0, 1)]
 
         """
         assert codomain.surface() is self.domain()
@@ -2568,7 +2568,7 @@ class SurfaceMorphism_factorization(SurfaceMorphism):
 
             sage: a, b = S.homology().gens()
             sage: f._image_chain(a.chain(), codomain=f.codomain().chains())
-            B[((0, 0), 1)]
+            [((0, 0), 1)]
 
         """
         return self._factorization()._image_chain(chain, codomain=codomain)
@@ -2592,7 +2592,7 @@ class SurfaceMorphism_factorization(SurfaceMorphism):
             NotImplementedError: not a single edge maps to this edge, cannot compute preimage of this edge yet
 
             sage: f._section_chain(b.chain(), codomain=S.homology())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         return self._factorization()._section_chain(chain, codomain=codomain)
@@ -2609,7 +2609,7 @@ class SurfaceMorphism_factorization(SurfaceMorphism):
             sage: f = S.delaunay_triangulate()
 
             sage: f._image_chain_edge(0, 0, codomain=f.codomain().chains())
-            B[((0, 0), 0)]
+            [((0, 0), 0)]
 
         """
         return self._factorization()._image_chain_edge(label, edge, codomain)
@@ -2626,7 +2626,7 @@ class SurfaceMorphism_factorization(SurfaceMorphism):
             sage: f = S.delaunay_triangulate()
 
             sage: f._section_chain_edge((0, 0), 0, codomain=f.domain().homology())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         return self._factorization()._section_chain_edge(label, edge, codomain)
@@ -3083,7 +3083,7 @@ class TriangulationMorphism_base(SurfaceMorphism):
             sage: S = translation_surfaces.origami(G('(1,2,3,4)'), G('(1,4,2,3)'))
             sage: triangulation = S.triangulate()
             sage: triangulation._image_chain_edge(1, 0, codomain=triangulation.codomain().chains())
-            B[((1, 0), 0)]
+            [((1, 0), 0)]
 
         """
         return codomain(self._image_edge(label, edge))
@@ -3382,7 +3382,7 @@ class DelaunayTriangulationMorphism(SurfaceMorphism):
             sage: f = S.delaunay_triangulate()._factorization()._morphisms[1]
 
             sage: f._image_chain_edge((0, 0), 0, codomain=f.codomain().chains())
-            B[((0, 0), 0)]
+            [((0, 0), 0)]
 
         """
         gens, chain_matrix = self._image_chain_edge_chain_matrix()
@@ -4036,7 +4036,7 @@ class GL2RMorphism(SurfaceMorphism):
             sage: S = translation_surfaces.square_torus()
             sage: f = S.apply_matrix(matrix([[1, 2], [0, 1]]), in_place=False)
             sage: f._image_chain_edge(0, 0, codomain=f.codomain().chains())
-            B[(0, 0)]
+            [(0, 0)]
 
         """
         return codomain((label, edge))
@@ -4192,7 +4192,7 @@ class SubdivideEdgesMorphism(SurfaceMorphism):
             sage: morphism = S.subdivide_edges(2)
 
             sage: morphism._image_chain_edge(0, 0, codomain=morphism.codomain().chains())
-            B[(0, 0)] + B[(0, 1)]
+            [(0, 0)] + [(0, 1)]
 
         """
         return sum(

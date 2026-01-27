@@ -106,8 +106,8 @@ class Morphism_to_pyflatsurf(SurfaceMorphism):
             sage: from flatsurf import translation_surfaces
             sage: S = translation_surfaces.veech_double_n_gon(5).triangulate().codomain()
             sage: to_pyflatsurf = S.pyflatsurf()  # optional: pyflatsurf
-            sage: to_pyflatsurf._image_chain_edge((0, 0), 0, codomain=to_pyflatsurf.codomain().homology())  # optional: pyflatsurf
-            B[((1, 2, 3), 0)]
+            sage: to_pyflatsurf._image_chain_edge((0, 0), 0, codomain=to_pyflatsurf.codomain().chains())  # optional: pyflatsurf
+            [((1, 2, 3), 0)]
 
         """
         return codomain(self._image_edge(label, edge))
@@ -262,7 +262,7 @@ class Morphism_from_pyflatsurf(SurfaceMorphism):
             sage: S = translation_surfaces.veech_double_n_gon(5).triangulate().codomain()
             sage: from_pyflatsurf = S.pyflatsurf().section()  # optional: pyflatsurf
             sage: from_pyflatsurf._image_chain_edge((1, 2, 3), 0, codomain=from_pyflatsurf.codomain().chains())  # optional: pyflatsurf
-            B[((0, 0), 0)]
+            [((0, 0), 0)]
 
         """
         half_edge = label[edge]
