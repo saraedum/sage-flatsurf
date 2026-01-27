@@ -1888,12 +1888,82 @@ class SimplicialChain(Element):
         return self.parent().change(k=self.parent().degree() - 1)(self.parent()._boundary() * self.coefficients())
 
     def is_cycle(self):
-        # TODO
-        raise NotImplementedError
+        r"""
+        Return whether this chain is a cycle.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: T = translation_surfaces.cathedral(1, 3)
+
+        ::
+
+            sage: C = T.chains(k=0)
+            sage: c = C.an_element(); c
+            [Vertex 0 of polygon 0] + [Vertex 1 of polygon 1] + [Vertex 0 of polygon 1]
+            sage: c.is_cycle()
+            True
+
+        ::
+
+            sage: C = T.chains()
+            sage: c = C.an_element(); c
+            [(0, 0)] + [(0, 1)] + [(0, 3)] + [(1, 0)] + [(1, 1)] + [(1, 2)] + [(1, 4)] + [(1, 5)] + [(1, 6)] + [(1, 7)] + [(2, 0)] + [(3, 1)] + [(3, 7)]
+            sage: c.is_cycle()
+            False
+
+        ::
+
+            sage: C = T.chains(k=2)
+            sage: c = C.an_element(); c
+            [0] + [1] + [2] + [3]
+            sage: c.is_cycle()
+            True
+
+        """
+        return not self.boundary()
 
     def is_boundary(self):
-        # TODO
-        raise NotImplementedError
+        r"""
+        Return whether this chain is a boundary.
+
+        EXAMPLES::
+
+            sage: from flatsurf import translation_surfaces
+            sage: T = translation_surfaces.cathedral(1, 3)
+
+        ::
+
+            sage: C = T.chains(k=0)
+            sage: c = C.an_element(); c
+            [Vertex 0 of polygon 0] + [Vertex 1 of polygon 1] + [Vertex 0 of polygon 1]
+            sage: c.is_boundary()
+            False
+            sage: c.boundary().is_boundary()
+            True
+
+        ::
+
+            sage: C = T.chains()
+            sage: c = C.an_element(); c
+            [(0, 0)] + [(0, 1)] + [(0, 3)] + [(1, 0)] + [(1, 1)] + [(1, 2)] + [(1, 4)] + [(1, 5)] + [(1, 6)] + [(1, 7)] + [(2, 0)] + [(3, 1)] + [(3, 7)]
+            sage: c.is_boundary()
+            False
+            sage: c.boundary().is_boundary()
+            True
+
+        ::
+
+            sage: C = T.chains(k=2)
+            sage: c = C.an_element(); c
+            [0] + [1] + [2] + [3]
+            sage: c.is_boundary()
+            False
+            sage: c.boundary().is_boundary()
+            True
+
+        """
+        return self.coefficients() in self.parent().change(self.parent().degree() + 1)._boundary().transpose().image()
 
     def __iter__(self):
         r"""
