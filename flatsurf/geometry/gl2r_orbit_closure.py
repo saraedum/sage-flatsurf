@@ -99,7 +99,7 @@ class GL2ROrbitClosure:
         ....:     assert (O.proj * V.gen(e.index())) == H.gen(i)
     """
 
-    def __init__(self, surface):
+    def __init__(self, surface, implementation=None):
         from flatsurf.features import pyflatsurf_feature
         pyflatsurf_feature.require()
 
@@ -127,6 +127,7 @@ class GL2ROrbitClosure:
             )
 
         self._surface = surface
+        self._implementation = implementation or "spanning-set"
 
         # TODO: Drop all this and use homology machinery instead.
         # We construct a spanning set of edges, that is a subset of the edges
@@ -162,6 +163,31 @@ class GL2ROrbitClosure:
         # TODO: Is this just a cohomology element essentially?
         self.update_tangent_space_from_vector(self.H.transpose()[0])
         self.update_tangent_space_from_vector(self.H.transpose()[1])
+
+    @cached_method
+    def homology(self, relative=True):
+        r"""
+        Return the (relative) homology used in the orbit closure computations.
+
+        EXAMPLES::
+
+            sage: from flatsurf import polygons, similarity_surfaces
+            sage: from flatsurf import GL2ROrbitClosure  # optional: pyflatsurf
+
+            sage: T = polygons.triangle(3, 3, 5)
+            sage: S = similarity_surfaces.billiard(T)
+            sage: S = S.minimal_cover(cover_type="translation")
+            sage: O = GL2ROrbitClosure(S)  # optional: pyflatsurf
+
+            sage: O.homology()
+
+            sage: O.homology(relative=False)
+
+        """
+        if self._implementation == "spanning-set":
+            raise NotImplementedError
+
+        raise NotImplementedError("cannot compute homology in this implementation of orbit closures yet")
 
     @cached_method
     def _flat_triangulation(self):
@@ -428,10 +454,18 @@ class GL2ROrbitClosure:
             ....:
             ....:     assert holonomy.parent() is S.base_ring()**2
             ....:     assert holonomy == O._vector_space_conversion().section(vector)
+            doctest:warning
+            ...
+            UserWarning: holonomy() has been deprecated and will be removed in a future version of sage-flatsurf; use holonomy() on a homology class instead
 
         """
-        # TODO: Implement in homology instead, i.e., as a method on a homology class.
-        return self.V(v) * self.H
+        import warnings
+        warnings.warn("holonomy() has been deprecated and will be removed in a future version of sage-flatsurf; use holonomy() on a homology class instead")
+
+        if self._implementation != "spanning-set":
+            raise NotImplementedError("holonomy() only implemented for the legacy spanning-set implementation of GL2ROrbitClosure")
+
+        return self.homology(relative=True)(v).holonomy()
 
     def holonomy_dual(self, v):
         r"""

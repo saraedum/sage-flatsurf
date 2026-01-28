@@ -39,7 +39,7 @@ EXAMPLES::
 
 from sage.structure.sage_object import SageObject
 from sage.misc.cachefunc import cached_method
-from sage.misc.unknown import UnknownClass, Unknown
+from sage.misc.unknown import UnknownClass
 
 
 class FlowDecomposition_base(SageObject):

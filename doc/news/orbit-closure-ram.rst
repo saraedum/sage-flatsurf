@@ -1,6 +1,8 @@
 **Added:**
 
-* Added ``slopes()`` and ``_decomposition()`` to all translation surfaces; these were originally only implemented on ``GL2ROrbitClosure``. Note that ``_decomposition()`` does not return a proper sage-flatsurf object yet but a libflatsurf ``FlowDecomposition`` defined over the corresponding flat triangulation.
+* Added ``slopes()`` and ``flow_decomposition()`` to all translation surfaces; these were originally only implemented on ``GL2ROrbitClosure``.
+* Added ``chains()`` to all translation surfaces and added support for mapping chains similar to the existing machinery on homology classes.
+* Added ``holonomy()`` to homology classes to replace ``holonomy()`` on ``GL2ROrbitClosure``.
 * Added ``vector_space_conversion()`` and ``ring_conversion()`` to pyflatsurf backed surfaces to get direct access to the underlying map from SageMath to libflatsurf objects.
 
 **Changed:**
@@ -11,6 +13,7 @@
 
 * Deprecated construction of GL2ROrbitClosure from pyflatsurf flat triangulations, instead all orbit closures should be created from actual sage-flatsurf surfaces.
 * Deprecated flow decomposition machinery on GL2ROrbitClosure, i.e., ``decomposition()``, ``decompositions()``, ``decompositions_depth_first()``, and ``decompositions_breadth_first()``.
+* Deprecated (co)homology machinery on GL2ROrbitClosure, i.e., ``holonomy()``, ...
 
 **Removed:**
 
