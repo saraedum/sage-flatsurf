@@ -438,6 +438,7 @@ class MutablePolygonalSurface(Surface_base):
              'canonicalize',
              'canonicalize_mapping',
              'erase_marked_points',
+             'flow_decomposition',
              'holonomy_field',
              'is_veering_triangulated',
              'j_invariant',

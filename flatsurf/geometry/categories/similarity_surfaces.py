@@ -730,8 +730,10 @@ class SimilaritySurfaces(SurfaceCategory):
                 sage: from flatsurf import dilation_surfaces
                 sage: S = dilation_surfaces.genus_two_square(1/2, 1/3, 1/4, 1/5)
                 sage: S.chains()
+                C₁(Genus 2 Positive Dilation Surface built from 2 right triangles and a hexagon)
 
                 sage: S.chains(0)
+                C₀(Genus 2 Positive Dilation Surface built from 2 right triangles and a hexagon)
 
             """
             if self.is_mutable():

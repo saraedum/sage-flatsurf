@@ -12,7 +12,7 @@ The absolute cohomology of the regular octagon::
 A basis of cohomology::
 
     sage: H.gens()
-    [{B[(0, 1)]: 1}, {B[(0, 2)]: 1}, {B[(0, 3)]: 1}, {B[(0, 0)]: 1}]
+    [{[(0, 1)]: 1}, {[(0, 2)]: 1}, {[(0, 3)]: 1}, {[(0, 0)]: 1}]
 
 The absolute cohomology of the unfolding of the (3, 4, 13) triangle::
 
@@ -99,7 +99,7 @@ class SimplicialCohomologyClass(Element):
             sage: f, _, _, _ = H.gens()
 
             sage: f
-            {B[(0, 1)]: 1}
+            {[(0, 1)]: 1}
 
         """
         return repr(self._values)
@@ -351,7 +351,7 @@ class SimplicialCohomologyGroup(Parent):
             sage: H(0)
             {}
             sage: H({gen: 1 for gen in H.homology().gens()})
-            {B[(0, 1)]: 1, B[(0, 0)]: 1}
+            {[(0, 1)]: 1, [(0, 0)]: 1}
 
         """
         if not x:
@@ -392,7 +392,7 @@ class SimplicialCohomologyGroup(Parent):
             sage: T = translation_surfaces.square_torus()
             sage: H = SimplicialCohomology(T)
             sage: H.gens()
-            [{B[(0, 1)]: 1}, {B[(0, 0)]: 1}]
+            [{[(0, 1)]: 1}, {[(0, 0)]: 1}]
 
         """
         return [self({gen: 1}) for gen in self.homology().gens()]
