@@ -1,3 +1,4 @@
+# TODO: Refuse to map chains & classes in degree 0 and 2. (Or implement them.)
 r"""
 Morphisms between Surfaces
 
