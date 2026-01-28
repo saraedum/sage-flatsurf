@@ -31,7 +31,7 @@ EXAMPLES::
 # ********************************************************************
 #  This file is part of sage-flatsurf.
 #
-#        Copyright (C) 2024 Julian Rüth
+#        Copyright (C) 2024-2026 Julian Rüth
 #
 #  sage-flatsurf is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by

@@ -73,7 +73,7 @@ A non-singular point::
 # ********************************************************************
 #  This file is part of sage-flatsurf.
 #
-#        Copyright (C) 2023-2024 Julian Rüth
+#        Copyright (C) 2023-2026 Julian Rüth
 #
 #  sage-flatsurf is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -1205,8 +1205,7 @@ class SurfaceMorphism(Morphism):
 
         The image of a homology class::
 
-            sage: from flatsurf import SimplicialHomology
-            sage: H = SimplicialHomology(S)
+            sage: H = S.homology()
             sage: a, b = H.gens()
 
             sage: H.hom(morphism)(a)
@@ -1247,8 +1246,7 @@ class SurfaceMorphism(Morphism):
             sage: morphism = S.apply_matrix(matrix([[2, 0], [0, 1]]), in_place=False)
             sage: T = morphism.codomain()
 
-            sage: from flatsurf import SimplicialHomology
-            sage: H = SimplicialHomology(T)
+            sage: H = T.homology()
             sage: a, b = H.gens()
             sage: a
             [(0, 1)]
@@ -1383,8 +1381,7 @@ class SurfaceMorphism(Morphism):
             sage: S = translation_surfaces.square_torus()
             sage: morphism = S.apply_matrix(matrix([[2, 0], [0, 1]]), in_place=False)
 
-            sage: from flatsurf import SimplicialHomology
-            sage: H = SimplicialHomology(S)
+            sage: H = S.homology()
             sage: a, b = H.gens()
 
             sage: morphism._image_homology_gen(a, codomain=morphism.codomain().homology())
@@ -1415,8 +1412,7 @@ class SurfaceMorphism(Morphism):
             sage: S = translation_surfaces.square_torus()
             sage: morphism = S.apply_matrix(matrix([[2, 0], [0, 1]]), in_place=False)
 
-            sage: from flatsurf import SimplicialHomology
-            sage: H = SimplicialHomology(morphism.codomain())
+            sage: H = morphism.codomain().homology()
             sage: a, b = H.gens()
 
             sage: morphism._section_homology_gen(a, codomain=S.homology())

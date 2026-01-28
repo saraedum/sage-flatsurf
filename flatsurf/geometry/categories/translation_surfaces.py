@@ -718,6 +718,26 @@ class TranslationSurfaces(SurfaceCategoryWithAxiom):
                         slopes.insert(direction)
                         yield surface.vector_space_conversion().section(direction)
 
+                def flow_decomposition(self, slope):
+                    r"""
+                    Return a decomposition of this surface into flow components
+                    in direction ``slope``.
+
+                    INPUT:
+
+                    - ``slope`` -- a direction vector in this surface,
+                      typically, a direction coming from a saddle connection
+                      holonomy.
+
+                    EXAMPLES::
+
+                        TODO: Recycle examples from _decomposition here.
+                        
+                    """
+                    # TODO: Override in pyflatsurf surfaces
+                    from flatsurf.geometry.flow_decomposition import FlowDecomposition
+                    return FlowDecomposition(self, slope)
+
                 def _decomposition(self, slope, limit=-1):
                     r"""
                     Return the flow decomposition in direction ``slope``.
@@ -782,6 +802,7 @@ class TranslationSurfaces(SurfaceCategoryWithAxiom):
                         True
 
                     """
+                    # TODO: Move to FlowDecomposition_pyflatsurf, i.e., delete
                     surface = self.pyflatsurf().codomain()
 
                     vector_space_conversion = surface.vector_space_conversion()

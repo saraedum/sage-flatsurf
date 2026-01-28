@@ -473,3 +473,7 @@ class Surface_pyflatsurf(OrientedSimilaritySurface):
 
         """
         return hash(self._flat_triangulation)
+
+    def flow_decomposition(self, direction):
+        from flatsurf.geometry.pyflatsurf.flow_decomposition import FlowDecomposition_pyflatsurf
+        return FlowDecomposition_pyflatsurf(self, direction)
