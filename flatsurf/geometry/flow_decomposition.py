@@ -236,6 +236,101 @@ class FlowComponent_base(SageObject):
             return "Minimal component"
         return "Undetermined component"
 
+    ## TODO: Provide this somehow. E.g., by returning the cylinder circumference as a chain.
+    ## def cylinder_circumference(self, component, A, sc_index, proj):
+    ##     r"""
+    ##     Return the circumference of the cylinder ``component`` in the homology
+    ##     of the underlying surface.
+
+    ##     INPUT:
+
+    ##     - ``component`` -- a cylinder
+
+    ##     - ``A``, ``sc_index``, ``proj`` -- the output of
+    ##       ``flow_decomposition_kontsevich_zorich_cocycle``
+
+    ##     EXAMPLES::
+
+    ##         sage: from flatsurf import translation_surfaces
+    ##         sage: from flatsurf import GL2ROrbitClosure  # optional: pyflatsurf
+
+    ##         sage: S = translation_surfaces.veech_double_n_gon(5)
+    ##         sage: O = GL2ROrbitClosure(S)  # optional: pyflatsurf
+    ##         sage: dec = next(iter(S._decomposition(slope) for slope in S.slopes(bound=1)))  # optional: pyflatsurf
+    ##         sage: c0, c1 = dec.components() # optional: pyflatsurf
+    ##         sage: kz = O.flow_decomposition_kontsevich_zorich_cocycle(dec) # optional: pyflatsurf
+    ##         sage: O.cylinder_circumference(c0, *kz) # optional: pyflatsurf
+    ##         (1, 1, 1, -1)
+    ##         sage: O.cylinder_circumference(c1, *kz) # optional: pyflatsurf
+    ##         (0, 0, 1, 0)
+
+    ##     """
+    ##     # TODO: Change the returned value to be an actual relative homology class.
+    ##     # TODO: Do we really need the weird input from kontsevich_zorich_cocycle?
+    ##     if (
+    ##         component.cylinder() != True
+    ##     ):  # we are comparing to a boost tribool so this cannot be replaced by "is not True"  # noqa
+    ##         raise ValueError
+
+    ##     perimeters = list(component.perimeter())
+    ##     per = perimeters[0]
+    ##     assert not per.vertical()
+    ##     sc = per.saddleConnection()
+    ##     i = sc_index[sc]
+    ##     if i < 0:
+    ##         s = -1
+    ##         i = -i - 1
+    ##     else:
+    ##         s = 1
+    ##     v = s * proj.column(i)
+    ##     circumference = -A.solve_right(v)
+
+    ##     # check
+    ##     hol = self.holonomy_dual(circumference)
+    ##     holbis = self._vector_space_conversion().section(component.circumferenceHolonomy())
+    ##     assert hol == holbis, (hol, holbis)
+
+    ##     return circumference
+    ##
+    ## def cylinder_circumferences(self, decomposition):
+    ##     # TODO: Return relative homology classes. (Though they actually lift to elements of absolute homology which we could assert maybe.)
+    ##     # TODO: This is just a base change applied to the relative homology induced by decomposition. Maybe we could model it there trivially.
+    ##     kz = self.flow_decomposition_kontsevich_zorich_cocycle(decomposition)
+
+    ##     vcyls = []
+
+    ##     for component in decomposition.components():
+    ##         if (
+    ##             component.cylinder() == False
+    ##         ):  # we are comparing to a boost tribool so this cannot be replaced by "is False"  # noqa
+    ##             continue
+    ##         elif (
+    ##             component.cylinder() == True
+    ##         ):  # we are comparing to a boost tribool so this cannot be replaced with "is True"  # noqa
+    ##             vcyls.append(self.cylinder_circumference(component, *kz))
+
+    ##         else:
+    ##             return []
+
+    ##     return vcyls
+
+    ## TODO: Expose this.
+    ## def cylinder_module(self, cylinder):
+    ##     r"""
+    ##     Return the modulus of ``cylinder``, i.e., its width and height.
+
+    ##     EXAMPLES::
+
+    ##         # TODO: Add example.
+
+    ##     """
+    ##     section  = self._vector_space_conversion().ring_conversion().section
+    ##     width = section(cylinder.width())
+    ##     height = section(cylinder.vertical().project(cylinder.circumferenceHolonomy()))
+
+    ##     return width, height
+
+
 class FlowComponent_mapped(FlowComponent_base):
     def __init__(self, parent: FlowDecomposition_base, component: FlowComponent_base, morphism):
         super().__init__(parent)

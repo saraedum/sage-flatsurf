@@ -693,6 +693,95 @@ class SimplicialHomologyClass(Element):
 
         super().__setstate__(state)
 
+    ### def lift(self, v):
+    ###     # TODO: This should return a 1-chain instead so it's just a lift of a homology class. And thus should live on cohomology classes.
+    ###     r"""
+    ###     Given a vector in the "spanning set basis" return a vector on the full basis of
+    ###     edges.
+
+    ###     The vectors are returned as columns in a matrix. Each column
+    ###     corresponds to one edge in the underlying :meth:`_flat_triangulation`
+    ###     ordered as returned by its ``.edges()``.
+
+    ###     EXAMPLES::
+
+    ###         sage: from flatsurf import polygons, translation_surfaces, similarity_surfaces
+    ###         sage: from flatsurf import GL2ROrbitClosure  # optional: pyflatsurf
+
+    ###         sage: S = translation_surfaces.mcmullen_genus2_prototype(4,2,1,1,0)
+    ###         sage: O = GL2ROrbitClosure(S)  # optional: pyflatsurf
+    ###         sage: u0,u1 = O.tangent_space_basis()  # optional: pyflatsurf
+    ###         sage: v0 = O.lift(u0)  # optional: pyflatsurf
+    ###         sage: v1 = O.lift(u1)  # optional: pyflatsurf
+    ###         sage: span([v0, v1])  # optional: pyflatsurf
+    ###         Vector space of degree 9 and dimension 2 over Number Field in l with defining polynomial x^2 - x - 8 with l = 3.372281323269015?
+    ###         Basis matrix:
+    ###         [            1             0            -1   1/8*l + 7/8  -1/8*l + 1/8            -1   5/8*l - 5/8  -1/2*l + 3/2 -5/8*l + 13/8]
+    ###         [            0             1            -1   1/4*l - 1/4  -1/4*l + 1/4             0   1/4*l - 1/4             0  -1/4*l + 1/4]
+
+    ###     This can be used to deform the surface::
+
+    ###         sage: T = polygons.triangle(3,4,13)
+    ###         sage: S = similarity_surfaces.billiard(T)
+    ###         sage: S = S.minimal_cover("translation").erase_marked_points() # long time (3s, #122), optional: pyflatsurf
+    ###         sage: O = GL2ROrbitClosure(S)  # long time (above), optional: pyflatsurf
+    ###         sage: for slope in S.slopes(bound=4): # long time (2s, #124), optional: pyflatsurf
+    ###         ....:     d = S._decomposition(slope, limit=20)
+    ###         ....:     O.update_tangent_space_from_flow_decomposition(d)
+    ###         ....:     if O.dimension() == 4:
+    ###         ....:         break
+    ###         sage: d1,d2,d3,d4 = [O.lift(b) for b in O.tangent_space_basis()]  # long time (above), optional: pyflatsurf
+    ###         sage: dreal = d1/132 + d2/227 + d3/1280 - d4/13201  # long time (above), optional: pyflatsurf
+    ###         sage: dimag = d1/141 - d2/233 + d4/1230 + d4/14250  # long time (above), optional: pyflatsurf
+    ###         sage: d = [O._vector_space_conversion()((x,y)) for x,y in zip(dreal,dimag)]  # long time (above), optional: pyflatsurf
+    ###         sage: S2 = O._flat_triangulation() + d  # long time (6s), optional: pyflatsurf
+
+    ###         sage: from flatsurf.geometry.pyflatsurf.surface import Surface_pyflatsurf  # optional: pyflatsurf
+    ###         sage: S2 = Surface_pyflatsurf(S2.surface())  # long time (above), optional: pyflatsurf
+    ###         sage: O2 = GL2ROrbitClosure(S2)  # long time (above), optional: pyflatsurf
+    ###         sage: for slope in S2.slopes(bound=1):  # long time (25s, #124), optional: pyflatsurf
+    ###         ....:     d = S2._decomposition(slope, limit=20)
+    ###         ....:     O2.update_tangent_space_from_flow_decomposition(d)
+
+    ###     TESTS:
+
+    ###     Verify that this also works with exact-real coefficients::
+
+    ###         sage: from flatsurf import Polygon, EuclideanPolygonsWithAngles
+    ###         sage: from pyexactreal import ExactReals  # optional: pyexactreal  # random output due to matplotlib warnings with some combinations of setuptools and matplotlib
+
+    ###         sage: E = EuclideanPolygonsWithAngles((1, 5, 5, 5))
+    ###         sage: R = ExactReals(E.base_ring())  # optional: pyexactreal
+    ###         sage: slopes = E.slopes()
+    ###         sage: T = Polygon(angles=(1, 5, 5, 5), edges=[slopes[0], R.random_element(1/4) * slopes[1]])  # optional: pyexactreal
+    ###         sage: S = similarity_surfaces.billiard(T)  # optional: pyexactreal
+    ###         sage: S = S.minimal_cover(cover_type="translation")  # optional: pyexactreal
+    ###         sage: O = GL2ROrbitClosure(S)  # optional: pyflatsurf, optional: pyexactreal
+    ###         sage: d1, d2, d3, d4 = [O.lift(b) for b in O.tangent_space_basis()]  # optional: pyflatsurf, optional: pyexactreal
+
+    ###     """
+    ###     # given the values on the spanning edges we reconstruct the unique vector that
+    ###     # vanishes on the boundary
+    ###     bdry = self.boundaries()
+    ###     n = self._flat_triangulation().edges().size()
+    ###     k = len(self.spanning_set)
+    ###     assert k + len(bdry) == n + 1
+    ###     A = matrix(QQ, n + 1, n)
+    ###     for i, e in enumerate(self.spanning_set):
+    ###         A[i, e.index()] = 1
+    ###     for i, b in enumerate(bdry):
+    ###         A[k + i, :] = b
+
+    ###     u = vector(self._surface.base_ring(), n + 1)
+    ###     u[:k] = v
+
+
+    ###     from pyexactreal.exact_reals import ExactReals
+    ###     if isinstance(u.base_ring(), ExactReals):
+    ###         u = u.change_ring(u.base_ring().base_ring())
+
+    ###     return A.solve_right(u)
+
 
 class SimplicialHomologyGroup(Parent):
     r"""
@@ -778,7 +867,7 @@ class SimplicialHomologyGroup(Parent):
                         "can only compute homology relative to a subset of the vertices"
                     )
 
-        if implementation == "generic":
+        if implementation in ["generic", "spanning-set"]:
             if not surface.is_finite_type():
                 raise NotImplementedError(
                     "homology only implemented for surfaces with finitely many polygons"
@@ -972,30 +1061,30 @@ class SimplicialHomologyGroup(Parent):
 
         # We compute the spaces of cycles and boundaries over the integers.
         # (The relations are all integer anyway.)
-        cycles = C._boundary().right_kernel()
         boundaries = C.change(k=self._k + 1)._boundary().transpose().image()
 
-        # Formal homology, we use the SageMath machinery to compute lifts and reductions for us.
-        homology = cycles.quotient(boundaries)
+        generators = self._homology_generators()
+
+        assert all(g.parent() is C for g in generators), "all generators of homology must be chains"
+        assert all(not g.boundary() for g in generators), "all generators of homology must be cycles"
 
         # The spaces of chains and homology in terms of distinguished generators.
         # We are going to return these spaces with maps between them essentially.
         free_chains = C._chains()
-        free_homology = self.base_ring() ** homology.ngens()
-
-        assert cycles.ambient().change_ring(self.base_ring()) is free_chains
+        free_homology = self.base_ring() ** len(generators)
 
         # Construct the map lifting our _homology_generators(), i.e., free_homology -> free_chains.
-        to_chain = free_homology.module_morphism(on_basis=lambda i: free_chains(homology.gen(i).lift()), codomain=free_chains)
+        to_chain = free_homology.module_morphism(on_basis=lambda i: free_chains(generators[i].coefficients()), codomain=free_chains)
 
-        # Construct the map reducing cycles to homology, i.e., the partial map free_chains -> free_homology.
-        # (This matrix is called __T internally in the quotient machinery of SageMath)
+        # Construct the map reducing cycles to homology; we produce a matrix
+        # that we then use to represent each cycle as <generators> +
+        # boundaries.
         from sage.all import matrix
-        T = matrix([
-            homology(c).vector() for c in cycles.gens()
-        ]).transpose()
-        cycles = cycles.change_ring(self.base_ring())
-        to_homology = free_chains.module_morphism(function=lambda x: free_homology(T * cycles.echelon_coordinate_vector(x)), codomain=free_homology)
+        T = matrix(tuple(g.coefficients() for g in generators) + boundaries.gens()).transpose()
+
+        assert not C._boundary() * T, "<generators> + boundary must span the space of cycles"
+
+        to_homology = free_chains.module_morphism(function=lambda x: free_homology(T.solve_right(x)[:len(generators)]), codomain=free_homology)
 
         assert all(to_homology(to_chain(gen)) == gen for gen in free_homology.gens())
 
@@ -1011,7 +1100,14 @@ class SimplicialHomologyGroup(Parent):
             sage: T = translation_surfaces.square_torus()
             sage: H = SimplicialHomology(T)
             sage: H._homology_generators()
-            ((1, 0), (0, 1))
+            ([(1, 0)], [(0, 1)])
+
+        ::
+
+            sage: from flatsurf import translation_surfaces, SimplicialHomology
+            sage: T = translation_surfaces.square_torus()
+            sage: H = SimplicialHomology(T, implementation="spanning-set")
+            sage: H._homology_generators()
 
         """
         if self._implementation == "generic":
@@ -1022,7 +1118,7 @@ class SimplicialHomologyGroup(Parent):
             boundaries = C.change(k=self._k + 1)._boundary().transpose().image()
             homology = cycles.quotient(boundaries)
 
-            return tuple(gen.lift().change_ring(self.base_ring()) for gen in homology.gens())
+            return tuple(C(C._chains()(gen.lift())) for gen in homology.gens())
 
         raise NotImplementedError("cannot compute generators of homology for this implementation yet")
 
